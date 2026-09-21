@@ -17,11 +17,11 @@ class ProfileScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // 1. 프로필 헤더
+            // 1. 프로필ㄹ헤더
             const ProfileHeader(),
             const SizedBox(height: 16),
 
-            // 2. 프로필 수정 버튼
+            // 2. 프로필 수정버튼
             OutlinedButton(
               onPressed: () {},
               style: OutlinedButton.styleFrom(
@@ -39,7 +39,7 @@ class ProfileScreen extends StatelessWidget {
             const ProfileStats(),
             const SizedBox(height: 32),
 
-            // 4. 선호하는 장르 영역
+            // 4. 선호하는 장르영역
             const FavoriteGenres(),
           ],
         ),
@@ -56,19 +56,18 @@ class ProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
+        // 로컬 이미지
+        const CircleAvatar(
+          radius: 50,
+          backgroundImage: AssetImage('assets/images/profile/user.png'),
+        ),
         const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text('무비러버', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(width: 4),
-            // SVG 아이콘 조건 충족용 (assets/icons/ 내 실제 파일명 적용)
-            SvgPicture.asset(
-              'assets/icons/movie.svg', // 사용하실 svg 파일명으로 변경
-              width: 16,
-              height: 16,
-            ),
+            SvgPicture.asset('assets/icons/movie.svg', width: 16, height: 16),
           ],
         ),
         const SizedBox(height: 8),
@@ -82,7 +81,7 @@ class ProfileHeader extends StatelessWidget {
   }
 }
 
-// 2. 통계 영역 위젯
+// 2. 통계 영역
 class ProfileStats extends StatelessWidget {
   const ProfileStats({super.key});
 
@@ -106,7 +105,7 @@ class ProfileStats extends StatelessWidget {
   }
 }
 
-// 2-1. 재사용 가능한 통계 항목
+// 2-1. 재사용 통계
 class StatItem extends StatelessWidget {
   final String label;
   final String value;
@@ -124,8 +123,6 @@ class StatItem extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 4),
           Text(
             value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -133,13 +130,15 @@ class StatItem extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
+          const SizedBox(height: 4),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );
   }
 }
 
-// 3. 선호 장르 영역 위젯
+// 3. 선호 장르영역
 class FavoriteGenres extends StatelessWidget {
   const FavoriteGenres({super.key});
 
