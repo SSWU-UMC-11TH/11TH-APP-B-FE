@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../theme/app_colors.dart';
 
@@ -57,7 +58,19 @@ class ProfileHeader extends StatelessWidget {
       children: [
         const CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
         const SizedBox(height: 12),
-        Text('무비러버', style: Theme.of(context).textTheme.titleMedium),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('무비러버', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(width: 4),
+            // SVG 아이콘 조건 충족용 (assets/icons/ 내 실제 파일명 적용)
+            SvgPicture.asset(
+              'assets/icons/movie.svg', // 사용하실 svg 파일명으로 변경
+              width: 16,
+              height: 16,
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         Text(
           '매주 주말엔 영화관으로 출근하는 프로 관람객. 좋은 영화를 보고 기록하는 것을 좋아합니다.',
