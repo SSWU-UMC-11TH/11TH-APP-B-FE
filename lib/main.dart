@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'screen/profile_screen.dart';
+import 'theme/app_theme.dart';
+
+import 'package:flutter_svg/flutter_svg.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,9 +14,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const ProfileScreen(),
+      theme: AppTheme.light,
+      home: const StartScreen(),
     );
   }
 }
@@ -31,12 +35,12 @@ class StartScreen extends StatelessWidget {
           child: Column(
             children: [
               const Spacer(),
-              // 1. 아이콘
-              const Icon(
-                Icons.movie_outlined,
-                size: 80,
-                color: Color(0xFF6750A4),
-                semanticLabel: 'Movie Log Icon',
+              // 1. 1주차 변형 아이콘
+              SvgPicture.asset(
+                'assets/logos/movielog_logo.svg',
+                width: 72,
+                height: 72,
+                semanticsLabel: 'MovieLog 로고',
               ),
               const SizedBox(height: 32),
               // 2. 제목
