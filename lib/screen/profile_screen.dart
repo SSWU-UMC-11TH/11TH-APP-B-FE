@@ -22,10 +22,12 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 16),
 
             // 2. 프로필 수정버튼
-            OutlinedButton(
+            ElevatedButton(
               onPressed: () {},
-              style: OutlinedButton.styleFrom(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.surface,
                 foregroundColor: AppColors.primary,
+                elevation: 0,
                 side: const BorderSide(color: AppColors.primary),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8.0),
