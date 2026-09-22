@@ -1,31 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/movie_log_app.dart';
 
-class Movie {
-  const Movie({required this.id, required this.title});
-
-  final int id;
-  final String title;
-}
-
-String getDisplayName(String? nickname) {
-  return nickname?.trim().isNotEmpty == true ? nickname! : '무비러버';
-}
+import 'screens/profile_screen.dart';
+import 'theme/app_theme.dart';
 
 void main() {
-  final movies = <Movie>[
-    const Movie(id: 1, title: '파묘'),
-    const Movie(id: 2, title: '인사이드 아웃 2'),
-    const Movie(id: 3, title: '범죄도시 4'),
-  ];
+  runApp(const MyApp());
+}
 
-  debugPrint('--- 영화 목록 ---');
-  for (final movie in movies) {
-    debugPrint(movie.title);
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'MovieLog',
+      theme: AppTheme.light,
+      home: const ProfileScreen(),
+    );
   }
-
-  String? userNickname;
-  debugPrint('사용자 닉네임: ${getDisplayName(userNickname)}');
-
-  runApp(const MovieLogApp());
 }
