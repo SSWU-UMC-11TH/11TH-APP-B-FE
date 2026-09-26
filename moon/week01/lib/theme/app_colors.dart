@@ -10,4 +10,5 @@ class AppColors {
   static const bodyText = Color(0xFF525054);
   static const white = Color.fromARGB(255, 255, 255, 255);
   static const lightviolet = Color.fromARGB(255, 232, 219, 255);
+  static const statBackground = Color(0xFFF2F1F1);
 }
