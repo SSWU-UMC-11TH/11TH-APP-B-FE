@@ -22,7 +22,7 @@ class ProfileStat extends StatelessWidget {
         horizontal: 8,
       ),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 242, 241, 241),
+        color: AppColors.statBackground,
         border: Border.all(
           color: AppColors.primary.withValues(alpha: 0.2),
         ),
