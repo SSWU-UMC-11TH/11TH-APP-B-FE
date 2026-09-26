@@ -40,7 +40,7 @@ class ProfileHeader extends StatelessWidget {
         const SizedBox(height: 6),
 
         Text(
-          '스릴러를 좋아해요.\n         ',
+          '스릴러를 좋아해요.',
           textAlign: TextAlign.center,
           style: AppTextStyles.body.copyWith(
             fontSize: 16.5,
