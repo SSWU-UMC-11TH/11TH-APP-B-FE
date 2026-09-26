@@ -1,11 +1,11 @@
 {
-    "name": "movielog",
-    "short_name": "movielog",
+    "name": "MovieLog",
+    "short_name": "MovieLog",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "MovieLog - 나만의 영화 기록 서비스",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
