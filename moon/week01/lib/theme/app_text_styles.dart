@@ -13,7 +13,7 @@ class AppTextStyles {
   static const body = TextStyle(
     fontSize: 13,
     fontWeight: FontWeight.w600,
-    color: Color.fromARGB(255, 82, 80, 84),
+    color: AppColors.bodyText,
   );
 
   static const statValue = TextStyle(
