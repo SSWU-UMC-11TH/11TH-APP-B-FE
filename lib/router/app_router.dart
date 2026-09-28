@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../screen/start_screen.dart';
@@ -8,7 +7,6 @@ import '../screen/home_screen.dart';
 import '../screen/movie_list_screen.dart';
 import '../screen/movie_detail_screen.dart';
 import '../screen/my_page_screen.dart';
-import '../screen/start_screen.dart';
 
 class AppRouter {
   AppRouter._();

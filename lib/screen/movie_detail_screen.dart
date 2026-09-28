@@ -97,7 +97,8 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                         context: context,
                         builder: (context) => const RatingDialog(),
                       );
-                      if (rating != null && mounted) {
+                      if (!mounted) return; // mounted 먼저 체크 후 return
+                      if (rating != null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('평점 $rating점이 등록되었습니다.')),
                         );
