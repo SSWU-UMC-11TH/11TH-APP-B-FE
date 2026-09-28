@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/router/app_router.dart';
 
 import 'screen/profile_screen.dart';
 import 'theme/app_theme.dart';
@@ -15,10 +16,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const SignUpScreen(),
+      routerConfig: AppRouter.router,
     );
   }
 }
