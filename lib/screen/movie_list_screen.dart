@@ -4,9 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/movie.dart';
 import '../services/fake_movie_service.dart';
 import '../widgets/movie_card.dart';
-import '../widgets/states/movie_empty_widget.dart';
-import '../widgets/states/movie_error_widget.dart';
-import '../widgets/states/movie_loading_widget.dart';
+import '../widgets/status/movie_empty_widget.dart';
+import '../widgets/status/movie_error_widget.dart';
+import '../widgets/status/movie_loading_widget.dart';
 
 class MovieListScreen extends StatefulWidget {
   const MovieListScreen({super.key});
