@@ -15,24 +15,36 @@ class GenreChipList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 40,
+      height: 48,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         itemCount: genres.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final genre = genres[index];
           final isSelected = genre == selectedGenre;
-          return ChoiceChip(
-            label: Text(genre),
-            selected: isSelected,
-            selectedColor: Theme.of(context).primaryColor,
-            labelStyle: TextStyle(
-              color: isSelected ? Colors.white : Colors.black87,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          return GestureDetector(
+            onTap: () => onGenreSelected(genre),
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? const Color(0xFF6750A4)
+                    : const Color(0xFFE6E0E9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                genre,
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 20 / 14,
+                  fontWeight: FontWeight.w500,
+                  color: isSelected ? Colors.white : const Color(0xFF1D1B20),
+                ),
+              ),
             ),
-            onSelected: (_) => onGenreSelected(genre),
           );
         },
       ),

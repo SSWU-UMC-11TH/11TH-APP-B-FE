@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/movie.dart';
-import '../widgets/movie_card.dart';
+import '../widgets/popular_movie_card.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -10,6 +10,10 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final featuredMovie = mockMovies[0];
+
+    final popularMovies = ([
+      ...mockMovies,
+    ]..sort((a, b) => b.rating.compareTo(a.rating))).take(5).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -54,7 +58,7 @@ class HomeScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                     gradient: LinearGradient(
                       colors: [
-                        Colors.black.withOpacity(0.8),
+                        Colors.black.withValues(alpha: 0.8),
                         Colors.transparent,
                       ],
                       begin: Alignment.bottomCenter,
@@ -139,19 +143,20 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 12),
 
             // 인기 영화 GridView
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: mockMovies.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.62,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 16,
+            // 인기 영화 가로 목록
+            SizedBox(
+              height: 230,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: popularMovies.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  return PopularMovieCard(
+                    movie: popularMovies[index],
+                    rank: index + 1,
+                  );
+                },
               ),
-              itemBuilder: (context, index) {
-                return MovieCard(movie: mockMovies[index]);
-              },
             ),
           ],
         ),
