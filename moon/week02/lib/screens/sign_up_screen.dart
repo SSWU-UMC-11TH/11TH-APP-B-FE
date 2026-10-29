@@ -25,13 +25,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool get _isNicknameValid =>
       _nicknameController.text.trim().length >= 2;
 
-  bool get _isEmailValid {
-    final email = _emailController.text.trim();
-
+  
+  bool _isValidEmail(String email) {
     return RegExp(
       r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-    ).hasMatch(email);
+    ).hasMatch(email.trim());
   }
+  
+  bool get _isEmailValid =>
+      _isValidEmail(_emailController.text);
+
 
   bool get _isPasswordValid =>
       _passwordController.text.length >= 8;
@@ -162,22 +165,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               TextInputType.emailAddress,
                           textInputAction:
                               TextInputAction.next,
+                          
                           validator: (value) {
-                            final email =
-                                value?.trim() ?? '';
-
+                            final email = value?.trim() ?? '';
+                          
                             if (email.isEmpty) {
                               return '이메일을 입력해주세요.';
                             }
-
-                            if (!RegExp(
-                              r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                            ).hasMatch(email)) {
+                          
+                            if (!_isValidEmail(email)) {
                               return '올바른 이메일 형식이 아닙니다.';
                             }
-
+                          
                             return null;
                           },
+
                           onChanged: (_) {
                             setState(() {});
                           },
