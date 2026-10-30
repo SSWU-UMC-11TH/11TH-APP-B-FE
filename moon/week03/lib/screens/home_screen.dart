@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../data/movie_data.dart';
 import '../theme/app_colors.dart';
@@ -193,13 +194,14 @@ class HomeScreen extends StatelessWidget {
                       const SizedBox(width: 12),
                   itemBuilder: (context, index) {
                     final movie = popularMovies[index];
-
+                    
                     return MovieCard(
                       movie: movie,
                       onTap: () {
-                        debugPrint('${movie.title} 선택');
+                        context.push('/movies/${movie.id}');
                       },
                     );
+
                   },
                 ),
               ),
