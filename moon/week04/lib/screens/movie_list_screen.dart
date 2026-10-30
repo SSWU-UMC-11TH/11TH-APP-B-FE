@@ -39,7 +39,7 @@ class _MovieListScreenState extends State<MovieListScreen> {
      PreferenceService();
 
   String selectedGenre = '전체';
-
+  bool _hasUserSelectedGenre = false;
 
   @override
 void initState() {
@@ -59,16 +59,21 @@ void initState() {
 
 
 Future<void> _loadSelectedGenre() async {
-  final savedGenre =
-      await preferenceService.loadGenre();
+  try {
+    final savedGenre = await preferenceService.loadGenre();
 
-  if (savedGenre != null &&
-      genres.contains(savedGenre)) {
-    setState(() {
-      selectedGenre = savedGenre;
-    });
+    if (!mounted || _hasUserSelectedGenre) return;
+
+    if (savedGenre != null && genres.contains(savedGenre)) {
+      setState(() {
+        selectedGenre = savedGenre;
+      });
+    }
+  } catch (error) {
+    debugPrint('저장된 장르를 불러오지 못했습니다: $error');
   }
 }
+
 
   @override
   Widget build(BuildContext context) {
@@ -134,16 +139,20 @@ Future<void> _loadSelectedGenre() async {
 
                     showCheckmark: false,
 
-
+                    
                     onSelected: (_) async {
-
                       setState(() {
+                        _hasUserSelectedGenre = true;
                         selectedGenre = genre;
                       });
-
-                     await preferenceService.saveGenre(genre);
-
+                    
+                      try {
+                        await preferenceService.saveGenre(genre);
+                      } catch (error) {
+                        debugPrint('장르 저장에 실패했습니다: $error');
+                      }
                     },
+
 
 
                     labelStyle: TextStyle(
