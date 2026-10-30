@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/movie_data.dart';
 import '../theme/app_colors.dart';
 import '../widgets/movie_card.dart';
+import 'package:go_router/go_router.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -132,7 +133,9 @@ class HomeScreen extends StatelessWidget {
                               width: double.infinity,
                               height: 44,
                               child: ElevatedButton(
-                                onPressed: () {},
+                                onPressed: () {
+                                  context.push('/movies/${featuredMovie.id}');
+                                },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: Colors.white,
@@ -196,7 +199,7 @@ class HomeScreen extends StatelessWidget {
                     return MovieCard(
                       movie: movie,
                       onTap: () {
-                        debugPrint('${movie.title} 선택');
+                        context.push('/movies/${movie.id}');
                       },
                     );
                   },
