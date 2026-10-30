@@ -10,6 +10,7 @@ import '../screens/movie_detail_screen.dart';
 import '../screens/main_screen.dart';
 
 import '../screens/my_page_screen.dart';
+import 'package:flutter/material.dart';
 
 class AppRouter {
   AppRouter._();
@@ -54,6 +55,7 @@ class AppRouter {
       child: MyPageScreen(),
   ),
 ),
+      
       // 영화 상세
       GoRoute(
         path: '/movies/:movieId',
@@ -62,9 +64,21 @@ class AppRouter {
             state.pathParameters['movieId'] ?? '',
           );
 
+          // 숫자가 아닌 movieId 또는 존재하지 않는 영화 처리
+          if (movieId == null ||
+              !mockMovies.any((movie) => movie.id == movieId)) {
+            return Scaffold(
+              appBar: AppBar(
+                title: const Text('영화 상세'),
+              ),
+              body: const Center(
+                child: Text('존재하지 않는 영화입니다.'),
+              ),
+            );
+          }
+
           final movie = mockMovies.firstWhere(
             (movie) => movie.id == movieId,
-            orElse: () => mockMovies.first,
           );
 
           return MovieDetailScreen(
@@ -72,6 +86,7 @@ class AppRouter {
           );
         },
       ),
+
     ],
   );
 }
