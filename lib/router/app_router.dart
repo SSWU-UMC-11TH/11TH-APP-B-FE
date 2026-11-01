@@ -1,5 +1,6 @@
 import 'package:flutter_application_1/data/services/tmdb_movie_service.dart';
 import 'package:flutter_application_1/view_models/movie_home_view_model.dart';
+import 'package:flutter_application_1/view_models/movie_list_view_model.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -42,19 +43,23 @@ class AppRouter {
       
           
           GoRoute(
-            path: '/movies',
-            builder: (context, state) => const MovieListScreen(),
-            routes: [
-              GoRoute(
-                path: ':movieId',
-                builder: (context, state) {
-                  final id =
-                      int.tryParse(state.pathParameters['movieId'] ?? '') ?? 0;
-                  return MovieDetailScreen(movieId: id);
-                },
-              ),
-            ],
-          ),
+  path: '/movies',
+  builder: (context, state) => ChangeNotifierProvider<MovieListViewModel>(
+    create: (context) => MovieListViewModel(
+      context.read<TmdbMovieService>(),
+    )..loadInitial(),
+    child: const MovieListScreen(),
+  ),
+  routes: [
+    GoRoute(
+      path: ':movieId',
+      builder: (context, state) {
+        final id = int.tryParse(state.pathParameters['movieId'] ?? '') ?? 0;
+        return MovieDetailScreen(movieId: id);
+      },
+    ),
+  ],
+),
           GoRoute(
             path: '/my',
             builder: (context, state) => const MyPageScreen(),
