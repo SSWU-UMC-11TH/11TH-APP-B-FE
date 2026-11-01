@@ -54,9 +54,5 @@ const List<Movie> mockMovies = [
 ];
 
 Movie? findMovieById(int id) {
-  try {
-    return mockMovies.firstWhere((movie) => movie.id == id);
-  } catch (_) {
-    return null;
-  }
+  return mockMovies.where((movie) => movie.id == id).firstOrNull;
 }

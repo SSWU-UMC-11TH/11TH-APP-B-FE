@@ -39,13 +39,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
       _agreedToTerms;
 }
 
-  void _submitForm() {
-    final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid || !_agreedToTerms) return;
-    FocusScope.of(context).unfocus();
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('회원가입이 완료되었습니다!')));
-  }
+void _submitForm() {
+  final isValid = _formKey.currentState?.validate() ?? false;
+  if (!isValid || !_agreedToTerms) return;
+
+  FocusScope.of(context).unfocus();
+  
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('회원가입이 완료되었습니다!')),
+  );
+
+  context.go('/home'); 
+}
 
   @override
   Widget build(BuildContext context) {
@@ -319,7 +324,8 @@ class _TermsAndSubmitSection extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           height: 48,
-          child: ElevatedButton(
+          child:ElevatedButton(
+  // ✅ canSubmit 조건에 따라 버튼 활성화/비활성화 및 제출 함수 연결
   onPressed: canSubmit ? onSubmit : null,
   style: ElevatedButton.styleFrom(
     backgroundColor: const Color(0xFF6B4EFF),
@@ -329,13 +335,14 @@ class _TermsAndSubmitSection extends StatelessWidget {
     ),
     elevation: 0,
   ),
-  child: const Text('가입하기',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+  child: const Text(
+    '가입하기',
+    style: TextStyle(
+      color: Colors.white,
+      fontSize: 16,
+      fontWeight: FontWeight.bold,
+    ),
+  ),
           ),
         ),
       ],

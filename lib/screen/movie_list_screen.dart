@@ -35,12 +35,15 @@ class _MovieListScreenState extends State<MovieListScreen> {
 
   // 앱 실행 시 저장된 장르 복원 후 비동기 목록 조회
   Future<List<Movie>> _initAndFetchMovies() async {
+  try {
     final savedGenre = await _prefs.getString(_genreKey);
-    if (savedGenre != null && genres.contains(savedGenre)) {
-      selectedGenre = savedGenre;
+    if (mounted && savedGenre != null && genres.contains(savedGenre)) {
+      setState(() => selectedGenre = savedGenre);
     }
-    return _movieService.fetchMovies(selectedGenre: selectedGenre);
+  } catch (_) {
   }
+  return _movieService.fetchMovies(selectedGenre: selectedGenre);
+}
 
   // 재시도 및 장르 변경 시 새로운 Future 생성
   void _refetchMovies() {
@@ -51,19 +54,20 @@ class _MovieListScreenState extends State<MovieListScreen> {
 
   // 장르 선택 시 SharedPreferencesAsync 저장 및 화면 갱신
   Future<void> _onGenreSelected(String genre) async {
-    if (selectedGenre == genre) return;
+  if (selectedGenre == genre) return;
 
-    setState(() {
-      selectedGenre = genre;
-    });
+  setState(() {
+    selectedGenre = genre;
+  });
 
+  try {
     await _prefs.setString(_genreKey, genre);
-
-    // await 실행 후 mounted 검증 필수
-    if (!mounted) return;
-    _refetchMovies();
+  } catch (_) {
   }
 
+  if (!mounted) return;
+  _refetchMovies();
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
