@@ -320,19 +320,16 @@ class _TermsAndSubmitSection extends StatelessWidget {
           width: double.infinity,
           height: 48,
           child: ElevatedButton(
-            onPressed: () {
-              context.go('/home');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6B4EFF),
-              disabledBackgroundColor: const Color(0xFFCCC5E9),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              elevation: 0,
-            ),
-            child: const Text(
-              '가입하기',
+  onPressed: canSubmit ? onSubmit : null,
+  style: ElevatedButton.styleFrom(
+    backgroundColor: const Color(0xFF6B4EFF),
+    disabledBackgroundColor: const Color(0xFFCCC5E9),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8),
+    ),
+    elevation: 0,
+  ),
+  child: const Text('가입하기',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
