@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../models/movie.dart';
+import '../view_models/movie_home_view_model.dart';
+import '../widgets/tmdb_poster_image.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -9,7 +12,6 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final featuredMovie = mockMovies.first;
-    final popularMovies = mockMovies;
 
     return Scaffold(
       appBar: AppBar(
@@ -35,7 +37,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // 2. 추천 신작 대표 카드
+            // 2. 추천 신작 대표 카드 (mock 그대로)
             GestureDetector(
               onTap: () => context.push('/movies/${featuredMovie.id}'),
               child: Container(
@@ -45,9 +47,7 @@ class HomeScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   color: Colors.black,
                   image: const DecorationImage(
-                    image: AssetImage(
-                      'assets/images/movie_1.png',
-                    ), // 혹은 Mock 배경
+                    image: AssetImage('assets/images/movie_1.png'),
                     fit: BoxFit.cover,
                     opacity: 0.6,
                   ),
@@ -110,7 +110,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 28),
 
-            // 3. 인기 영화 가로 스크롤 섹션
+            // 3. 인기 영화 가로 스크롤 섹션 (TMDB)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -120,8 +120,8 @@ class HomeScreen extends StatelessWidget {
                 ),
                 GestureDetector(
                   onTap: () => context.go('/movies'),
-                  child: Row(
-                    children: const [
+                  child: const Row(
+                    children: [
                       Text(
                         '전체보기',
                         style: TextStyle(color: Colors.grey, fontSize: 13),
@@ -134,67 +134,85 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             SizedBox(
-              height: 180,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: popularMovies.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final movie = popularMovies[index];
-                  return GestureDetector(
-                    onTap: () => context.push('/movies/${movie.id}'),
-                    child: SizedBox(
-                      width: 110,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                color: Colors.grey[300],
-                                width: double.infinity,
-                                child: Center(
-                                  child: Text(
-                                    movie.title,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ),
-                              ),
+              height: 225,
+              child: Consumer<MovieHomeViewModel>(
+                builder: (context, vm, child) {
+                  return switch (vm.status) {
+                    MovieHomeLoadStatus.idle ||
+                    MovieHomeLoadStatus.loading =>
+                      const Center(child: CircularProgressIndicator()),
+                    MovieHomeLoadStatus.error => Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(vm.message ?? '오류가 발생했어요.'),
+                            TextButton(
+                              onPressed: () => context
+                                  .read<MovieHomeViewModel>()
+                                  .loadPopular(),
+                              child: const Text('다시 시도'),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            movie.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                color: Colors.amber,
-                                size: 12,
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                '${movie.rating}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  );
+                    MovieHomeLoadStatus.empty =>
+                      const Center(child: Text('인기 영화가 없어요.')),
+                    MovieHomeLoadStatus.success => ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: vm.popularMovies.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(width: 12),
+                        itemBuilder: (context, index) {
+                          final movie = vm.popularMovies[index];
+                          return GestureDetector(
+                            onTap: () => context.push('/movies/${movie.id}'),
+                            child: SizedBox(
+                              width: 110,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: TmdbPosterImage(
+                                      posterPath: movie.posterPath,
+                                      width: 110,
+                                      height: 165,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    movie.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.star,
+                                        color: Colors.amber,
+                                        size: 12,
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        movie.voteAverage.toStringAsFixed(1),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                  };
                 },
               ),
             ),

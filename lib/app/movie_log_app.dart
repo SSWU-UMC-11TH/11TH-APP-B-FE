@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/router/app_router.dart';
+import 'package:provider/provider.dart';
 
+import '../core/network/tmdb_client.dart';
+import '../data/services/tmdb_movie_service.dart';
 import '../theme/app_theme.dart';
 
 class MovieLogApp extends StatelessWidget {
@@ -8,11 +11,18 @@ class MovieLogApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      title: 'MovieLog',
-      theme: AppTheme.light,
-      routerConfig: AppRouter.router,
+    return MultiProvider(
+      providers: [
+        Provider<TmdbMovieService>(
+          create: (_) => TmdbMovieService(createTmdbClient()),
+        ),
+      ],
+      child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
+        title: 'MovieLog',
+        theme: AppTheme.light,
+        routerConfig: AppRouter.router,
+      ),
     );
   }
 }

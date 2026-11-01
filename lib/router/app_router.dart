@@ -1,4 +1,7 @@
+import 'package:flutter_application_1/data/services/tmdb_movie_service.dart';
+import 'package:flutter_application_1/view_models/movie_home_view_model.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../screen/start_screen.dart';
 import '../screen/sign_up_screen.dart';
@@ -27,10 +30,17 @@ class AppRouter {
           );
         },
         routes: [
-          GoRoute(
-            path: '/home',
-            builder: (context, state) => const HomeScreen(),
-          ),
+        GoRoute(
+  path: '/home',
+  builder: (context, state) => ChangeNotifierProvider<MovieHomeViewModel>(
+    create: (context) => MovieHomeViewModel(
+      context.read<TmdbMovieService>(),
+    )..loadPopular(),
+    child: const HomeScreen(),
+  ),
+),
+      
+          
           GoRoute(
             path: '/movies',
             builder: (context, state) => const MovieListScreen(),
