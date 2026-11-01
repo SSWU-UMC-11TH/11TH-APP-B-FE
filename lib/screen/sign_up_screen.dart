@@ -32,16 +32,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   bool get _canSubmit {
-    return _nicknameController.text.trim().length >= 2 &&
-        _emailController.text.contains('@') &&
-        _passwordController.text.length >= 8 &&
-        _agreedToTerms;
-  }
+  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+  return _nicknameController.text.trim().length >= 2 &&
+      emailRegex.hasMatch(_emailController.text.trim()) && 
+      _passwordController.text.length >= 8 &&
+      _agreedToTerms;
+}
 
   void _submitForm() {
     final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid) return;
-
+    if (!isValid || !_agreedToTerms) return;
     FocusScope.of(context).unfocus();
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('회원가입이 완료되었습니다!')));
@@ -249,11 +249,15 @@ class _FormInputFields extends StatelessWidget {
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
           validator: (v) {
-            final val = v?.trim() ?? '';
-            if (val.isEmpty) return '이메일을 입력해주세요.';
-            if (!val.contains('@')) return '올바른 이메일 형식이 아닙니다.';
-            return null;
-          },
+  final val = v?.trim() ?? '';
+  if (val.isEmpty) return '이메일을 입력해주세요.';
+  
+
+  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+  if (!emailRegex.hasMatch(val)) return '올바른 이메일 형식이 아닙니다.';
+  
+  return null;
+},
           onChanged: onChanged,
           onFieldSubmitted: (_) =>
               FocusScope.of(context).requestFocus(passwordFocusNode),

@@ -17,6 +17,7 @@ class FakeMovieService {
     if (forceEmpty) {
       return [];
     }
+    throw Exception('강제 에러 발생!');
 
     // movie.dart에 정의된 mockMovies를 직접 활용
     if (selectedGenre == '전체') {
