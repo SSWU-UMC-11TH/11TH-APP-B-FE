@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -31,21 +32,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   bool get _canSubmit {
-    return _nicknameController.text.trim().length >= 2 &&
-        _emailController.text.contains('@') &&
-        _passwordController.text.length >= 8 &&
-        _agreedToTerms;
-  }
+  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+  return _nicknameController.text.trim().length >= 2 &&
+      emailRegex.hasMatch(_emailController.text.trim()) && 
+      _passwordController.text.length >= 8 &&
+      _agreedToTerms;
+}
 
-  void _submitForm() {
-    final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid) return;
+void _submitForm() {
+  final isValid = _formKey.currentState?.validate() ?? false;
+  if (!isValid || !_agreedToTerms) return;
 
-    FocusScope.of(context).unfocus();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('회원가입이 완료되었습니다!')),
-    );
-  }
+  FocusScope.of(context).unfocus();
+  
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('회원가입이 완료되었습니다!')),
+  );
+
+  context.go('/home'); 
+}
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +61,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
         elevation: 0,
         title: const Text(
           '회원가입',
-          style: TextStyle(color: Color(0xFF6B4EFF), fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Color(0xFF6B4EFF),
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),
@@ -83,7 +91,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const SizedBox(height: 24),
                 _TermsAndSubmitSection(
                   agreedToTerms: _agreedToTerms,
-                  onTermsChanged: (value) => setState(() => _agreedToTerms = value ?? false),
+                  onTermsChanged: (value) =>
+                      setState(() => _agreedToTerms = value ?? false),
                   canSubmit: _canSubmit,
                   onSubmit: _submitForm,
                 ),
@@ -104,9 +113,15 @@ class _HeaderSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Column(
       children: [
-        Text('환영합니다!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(
+          '환영합니다!',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
         SizedBox(height: 8),
-        Text('간단한 정보만 입력하고 시작해보세요.', style: TextStyle(fontSize: 14, color: Colors.black54)),
+        Text(
+          '간단한 정보만 입력하고 시작해보세요.',
+          style: TextStyle(fontSize: 14, color: Colors.black54),
+        ),
       ],
     );
   }
@@ -143,7 +158,10 @@ class _CustomInputField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -155,11 +173,20 @@ class _CustomInputField extends StatelessWidget {
             hintText: hintText,
             filled: true,
             fillColor: Colors.grey[100],
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF6B4EFF), width: 1.5),
+              borderSide: const BorderSide(
+                color: Color(0xFF6B4EFF),
+                width: 1.5,
+              ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -179,7 +206,7 @@ class _CustomInputField extends StatelessWidget {
   }
 }
 
-// 위젯 2 입력 필드 모음 
+// 위젯 2 입력 필드 모음
 class _FormInputFields extends StatelessWidget {
   final TextEditingController nicknameController;
   final TextEditingController emailController;
@@ -215,7 +242,8 @@ class _FormInputFields extends StatelessWidget {
             return null;
           },
           onChanged: onChanged,
-          onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(emailFocusNode),
+          onFieldSubmitted: (_) =>
+              FocusScope.of(context).requestFocus(emailFocusNode),
         ),
         const SizedBox(height: 16),
         _CustomInputField(
@@ -226,13 +254,18 @@ class _FormInputFields extends StatelessWidget {
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
           validator: (v) {
-            final val = v?.trim() ?? '';
-            if (val.isEmpty) return '이메일을 입력해주세요.';
-            if (!val.contains('@')) return '올바른 이메일 형식이 아닙니다.';
-            return null;
-          },
+  final val = v?.trim() ?? '';
+  if (val.isEmpty) return '이메일을 입력해주세요.';
+  
+
+  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+  if (!emailRegex.hasMatch(val)) return '올바른 이메일 형식이 아닙니다.';
+  
+  return null;
+},
           onChanged: onChanged,
-          onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(passwordFocusNode),
+          onFieldSubmitted: (_) =>
+              FocusScope.of(context).requestFocus(passwordFocusNode),
         ),
         const SizedBox(height: 16),
         _CustomInputField(
@@ -281,22 +314,35 @@ class _TermsAndSubmitSection extends StatelessWidget {
               onChanged: onTermsChanged,
               activeColor: const Color(0xFF6B4EFF),
             ),
-            const Text('필수 약관에 동의합니다', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+            const Text(
+              '필수 약관에 동의합니다',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            ),
           ],
         ),
         const SizedBox(height: 16),
         SizedBox(
           width: double.infinity,
           height: 48,
-          child: ElevatedButton(
-            onPressed: canSubmit ? onSubmit : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6B4EFF),
-              disabledBackgroundColor: const Color(0xFFCCC5E9),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              elevation: 0,
-            ),
-            child: const Text('가입하기', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          child:ElevatedButton(
+  // ✅ canSubmit 조건에 따라 버튼 활성화/비활성화 및 제출 함수 연결
+  onPressed: canSubmit ? onSubmit : null,
+  style: ElevatedButton.styleFrom(
+    backgroundColor: const Color(0xFF6B4EFF),
+    disabledBackgroundColor: const Color(0xFFCCC5E9),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8),
+    ),
+    elevation: 0,
+  ),
+  child: const Text(
+    '가입하기',
+    style: TextStyle(
+      color: Colors.white,
+      fontSize: 16,
+      fontWeight: FontWeight.bold,
+    ),
+  ),
           ),
         ),
       ],
