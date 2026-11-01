@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'screen/profile_screen.dart';
 import 'theme/app_theme.dart';
+import 'screen/sign_up_screen.dart';
 
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -17,7 +18,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const ProfileScreen(),
+      home: const SignUpScreen(),
     );
   }
 }
