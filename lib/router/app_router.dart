@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
-import '../screens/start_screen.dart';
-import '../screens/sign_up_screen.dart';
-import '../screens/profile_screen.dart';
-import '../screens/main_screen.dart';
+import '../data/services/tmdb_movie_service.dart';
+import '../models/movie_detail_args.dart';
 import '../screens/home_screen.dart';
-import '../screens/movie_list_screen.dart';
+import '../screens/main_screen.dart';
 import '../screens/movie_detail_screen.dart';
+import '../screens/movie_list_screen.dart';
+import '../screens/profile_screen.dart';
+import '../screens/sign_up_screen.dart';
+import '../screens/start_screen.dart';
+import '../view_models/movie_home_view_model.dart';
+import '../view_models/movie_list_view_model.dart';
 
 class AppRouter {
   AppRouter._();
@@ -32,7 +37,13 @@ class AppRouter {
             routes: [
               GoRoute(
                 path: '/home',
-                builder: (context, state) => const HomeScreen(),
+                builder: (context, state) =>
+                    ChangeNotifierProvider<MovieHomeViewModel>(
+                      create: (context) =>
+                          MovieHomeViewModel(context.read<TmdbMovieService>())
+                            ..loadPopular(),
+                      child: const HomeScreen(),
+                    ),
               ),
             ],
           ),
@@ -41,20 +52,30 @@ class AppRouter {
             routes: [
               GoRoute(
                 path: '/movies',
-                builder: (context, state) => const MovieListScreen(),
+                builder: (context, state) =>
+                    ChangeNotifierProvider<MovieListViewModel>(
+                      create: (context) =>
+                          MovieListViewModel(context.read<TmdbMovieService>())
+                            ..loadInitial(),
+                      child: const MovieListScreen(),
+                    ),
                 routes: [
                   GoRoute(
                     path: ':movieId',
                     parentNavigatorKey: _rootNavigatorKey,
-                    builder: (context, state) => MovieDetailScreen(
-                      movieId: state.pathParameters['movieId']!,
-                    ),
+                    builder: (context, state) {
+                      final extra = state.extra;
+                      return MovieDetailScreen(
+                        movieId: state.pathParameters['movieId']!,
+                        args: extra is MovieDetailArgs ? extra : null,
+                      );
+                    },
                   ),
                 ],
               ),
             ],
           ),
-          // 탭 3: 마이페이지 (기존 profile_screen)
+          // 탭 3: 마이페이지
           StatefulShellBranch(
             routes: [
               GoRoute(

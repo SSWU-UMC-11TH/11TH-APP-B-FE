@@ -1,19 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../models/movie.dart';
+import '../data/models/tmdb_movie_dto.dart';
+import '../models/movie_detail_args.dart';
+import 'tmdb_poster_image.dart';
 
 class MovieCard extends StatelessWidget {
-  const MovieCard({super.key, required this.movie});
+  const MovieCard({super.key, required this.movie, this.genreNames = const []});
 
-  final Movie movie;
+  final TmdbMovieDto movie;
+  final List<String> genreNames;
 
   @override
   Widget build(BuildContext context) {
+    // release_date가 없으면 연도는 빼고 보여 준다.
+    final year = movie.releaseDate?.split('-').first;
+    final subtitle = [
+      ?year,
+      if (genreNames.isNotEmpty) genreNames.first,
+    ].join(' · ');
+
     return GestureDetector(
-      onTap: () {
-        context.push('/movies/${movie.id}');
-      },
+      onTap: () => context.push(
+        '/movies/${movie.id}', // 배열 index가 아니라 TMDB id
+        extra: MovieDetailArgs(movie: movie, genreNames: genreNames),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -23,15 +34,10 @@ class MovieCard extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    movie.posterUrl,
+                  child: TmdbPosterImage(
+                    posterPath: movie.posterPath,
                     width: double.infinity,
                     height: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                      color: const Color(0xFFE6E0E9),
-                      child: const Icon(Icons.movie, size: 50),
-                    ),
                   ),
                 ),
                 Positioned(
@@ -43,11 +49,11 @@ class MovieCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xCC322F35), // rgba(50,47,53,0.8)
+                      color: const Color(0xCC322F35),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '★ ${movie.rating}',
+                      '★ ${(movie.voteAverage / 2).toStringAsFixed(1)}',
                       style: const TextStyle(
                         color: Color(0xFFF5EFF7),
                         fontSize: 12,
@@ -73,14 +79,14 @@ class MovieCard extends StatelessWidget {
             ),
           ),
           Text(
-            '${movie.year} · ${movie.genre}',
+            subtitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 16,
               height: 24 / 16,
               fontWeight: FontWeight.w400,
-              color: Color(0xCC1D1B20), // opacity 0.8
+              color: Color(0xCC1D1B20),
             ),
           ),
         ],

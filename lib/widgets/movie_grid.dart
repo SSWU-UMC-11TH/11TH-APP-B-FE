@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 
-import '../models/movie.dart';
+import '../data/models/tmdb_movie_dto.dart';
 import 'movie_card.dart';
 
 class MovieGrid extends StatelessWidget {
-  const MovieGrid({super.key, required this.movies});
+  const MovieGrid({
+    super.key,
+    required this.movies,
+    required this.genreNamesOf,
+  });
 
-  final List<Movie> movies;
+  final List<TmdbMovieDto> movies;
+  final List<String> Function(TmdbMovieDto movie) genreNamesOf;
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +26,8 @@ class MovieGrid extends StatelessWidget {
           mainAxisSpacing: 16,
         ),
         itemBuilder: (context, index) {
-          return MovieCard(movie: movies[index]);
+          final movie = movies[index];
+          return MovieCard(movie: movie, genreNames: genreNamesOf(movie));
         },
       ),
     );
