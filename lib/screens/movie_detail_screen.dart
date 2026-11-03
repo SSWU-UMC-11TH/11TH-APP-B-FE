@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
-import '../models/movie.dart';
+import '../data/models/create_rating_request.dart';
+import '../models/movie_detail_args.dart';
 import '../widgets/movie_rating.dart';
+import '../widgets/tmdb_poster_image.dart';
 
 const _bg = Color(0xFFFAF9F5);
 const _violet = Color(0xFF6750A4);
@@ -11,9 +13,13 @@ const _textSub = Color(0xFF494551);
 const _chipBg = Color(0xFFE8DEF9);
 
 class MovieDetailScreen extends StatefulWidget {
-  const MovieDetailScreen({super.key, required this.movieId});
+  const MovieDetailScreen({super.key, required this.movieId, this.args});
 
+  /// 경로 /movies/:movieId 의 값 (TMDB 영화 id)
   final String movieId;
+
+  /// 목록·홈에서 넘겨준 영화 데이터. 앱 재시작 등으로 없을 수 있다.
+  final MovieDetailArgs? args;
 
   @override
   State<MovieDetailScreen> createState() => _MovieDetailScreenState();
@@ -34,29 +40,45 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     );
   }
 
-  Future<void> _showRatingDialog() async {
-    final result = await showDialog<double>(
+  Future<void> _showRatingDialog(int movieId) async {
+    final request = await showDialog<CreateRatingRequest>(
       context: context,
-      builder: (_) => MovieRatingDialog(initialRating: _myRating ?? 3.0),
+      builder: (_) => MovieRatingDialog(
+        movieId: movieId, // TMDB id를 평점 Dialog로 전달
+        initialRating: _myRating ?? 3.0,
+      ),
     );
-    if (!mounted || result == null) return;
-    setState(() => _myRating = result);
+    if (!mounted || request == null) return;
+
+    // 자체 API 연동 전까지는 로그로 movieId 전달을 확인한다.
+    debugPrint('[평점] CreateRatingRequest ${request.toJson()}');
+
+    setState(() => _myRating = request.score);
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('$result점을 남겼어요')));
+        .showSnackBar(SnackBar(content: Text('${request.score}점을 남겼어요')));
   }
 
   @override
   Widget build(BuildContext context) {
-    final int? id = int.tryParse(widget.movieId);
-    final movie = id != null ? findMovieById(id) : null;
+    final args = widget.args;
+    final movieId = int.tryParse(widget.movieId);
 
-    if (movie == null) {
+    if (args == null || movieId == null || args.movie.id != movieId) {
       return Scaffold(
         backgroundColor: _bg,
         appBar: AppBar(backgroundColor: _bg, title: const Text('영화 상세')),
-        body: const Center(child: Text('해당 영화 정보를 찾을 수 없습니다.')),
+        body: const Center(
+          child: Text(
+            '영화 정보를 찾을 수 없어요.\n목록에서 다시 선택해 주세요.',
+            textAlign: TextAlign.center,
+          ),
+        ),
       );
     }
+
+    final movie = args.movie;
+    final year = movie.releaseDate?.split('-').first; // 없으면 표시 안 함
+    final score = movie.voteAverage / 2; // TMDB 10점 → 5점 만점
 
     return Scaffold(
       backgroundColor: _bg,
@@ -81,16 +103,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Image.asset(
-              movie.posterUrl,
+            TmdbPosterImage(
+              posterPath: movie.posterPath,
               width: double.infinity,
               height: 350,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(
-                height: 350,
-                color: const Color(0xFFE6E0E9),
-                child: const Center(child: Icon(Icons.movie, size: 64)),
-              ),
             ),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -106,20 +122,22 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       color: _textMain,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${movie.year} · ${movie.runtime}분 · ${movie.genre}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      height: 20 / 14,
-                      color: _textSub,
+                  if (year != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '$year년 개봉',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 20 / 14,
+                        color: _textSub,
+                      ),
                     ),
-                  ),
+                  ],
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       RatingBarIndicator(
-                        rating: movie.rating,
+                        rating: score,
                         itemCount: 5,
                         itemSize: 20,
                         itemBuilder: (_, _) =>
@@ -127,7 +145,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '${movie.rating} (${movie.ratingCount})',
+                        '${score.toStringAsFixed(1)} · TMDB ${movie.voteAverage.toStringAsFixed(1)}/10',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -147,32 +165,34 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final tag in movie.tags)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _chipBg,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            tag,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF4F378A),
+                  if (args.genreNames.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final genre in args.genreNames)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _chipBg,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              genre,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF4F378A),
+                              ),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   const Divider(color: Color(0xFFCBC4D2)),
                   const SizedBox(height: 16),
@@ -186,14 +206,26 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    movie.description,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      height: 1.6,
-                      color: _textSub,
+                  if (movie.overview.isEmpty)
+                    // overview가 없으면 가운데에 안내 문구
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 32),
+                      child: Center(
+                        child: Text(
+                          '줄거리 정보가 없어요.',
+                          style: TextStyle(fontSize: 16, color: _textSub),
+                        ),
+                      ),
+                    )
+                  else
+                    Text(
+                      movie.overview,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        height: 1.6,
+                        color: _textSub,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -234,7 +266,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 child: SizedBox(
                   height: 52,
                   child: FilledButton.icon(
-                    onPressed: _showRatingDialog,
+                    onPressed: () => _showRatingDialog(movie.id),
                     icon: Icon(
                       _myRating == null ? Icons.star_border : Icons.refresh,
                     ),

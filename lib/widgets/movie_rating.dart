@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
-class MovieRatingDialog extends StatefulWidget {
-  const MovieRatingDialog({super.key, this.initialRating = 3.0});
+import '../data/models/create_rating_request.dart';
 
+class MovieRatingDialog extends StatefulWidget {
+  const MovieRatingDialog({
+    super.key,
+    required this.movieId,
+    this.initialRating = 3.0,
+  });
+
+  /// TMDB 영화 id. 평점 저장 요청의 movieId로 그대로 쓴다.
+  final int movieId;
   final double initialRating;
 
   @override
@@ -48,7 +56,10 @@ class _MovieRatingDialogState extends State<MovieRatingDialog> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: () => Navigator.pop(context, _rating),
+                onPressed: () => Navigator.pop(
+                  context,
+                  CreateRatingRequest(movieId: widget.movieId, score: _rating),
+                ),
                 style: ElevatedButton.styleFrom(
                   elevation: 0,
                   backgroundColor: const Color(0xFF6750A4),
