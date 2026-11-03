@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../models/movie.dart';
+import '../data/models/tmdb_movie_dto.dart';
+import '../models/movie_detail_args.dart';
+import 'tmdb_poster_image.dart';
 
 class PopularMovieCard extends StatelessWidget {
-  const PopularMovieCard({super.key, required this.movie, required this.rank});
+  const PopularMovieCard({
+    super.key,
+    required this.movie,
+    required this.rank,
+    this.genreNames = const [],
+  });
 
-  final Movie movie;
+  final TmdbMovieDto movie;
   final int rank;
+  final List<String> genreNames;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.push('/movies/${movie.id}'),
+      onTap: () => context.push(
+        '/movies/${movie.id}', // 배열 index가 아니라 TMDB id
+        extra: MovieDetailArgs(movie: movie, genreNames: genreNames),
+      ),
       child: SizedBox(
         width: 120,
         child: Column(
@@ -23,15 +34,10 @@ class PopularMovieCard extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.asset(
-                      movie.posterUrl,
+                    child: TmdbPosterImage(
+                      posterPath: movie.posterPath,
                       width: double.infinity,
                       height: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
-                        color: Colors.grey[300],
-                        child: const Center(child: Icon(Icons.movie, size: 40)),
-                      ),
                     ),
                   ),
                   Positioned(
@@ -71,7 +77,7 @@ class PopularMovieCard extends StatelessWidget {
                 const Icon(Icons.star, color: Colors.amber, size: 14),
                 const SizedBox(width: 2),
                 Text(
-                  '${movie.rating}',
+                  (movie.voteAverage / 2).toStringAsFixed(1),
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
