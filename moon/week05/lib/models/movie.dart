@@ -8,7 +8,7 @@ class Movie {
     required this.ratingCount,
     required this.duration,
     required this.imagePath,
-    required this.synopsis, fontWeight,
+    required this.synopsis,
   });
 
   final int id;
