@@ -78,6 +78,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+            color: AppColors.textPrimary,
+          ),
+          onPressed: () => context.go('/'),
+        ),
         title: const Text(
           '회원가입',
           style: TextStyle(
