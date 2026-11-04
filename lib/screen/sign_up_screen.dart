@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/view_models/sign_up_view_model.dart';
+import 'package:flutter_application_1/widgets/movielog_button.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -32,25 +35,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   bool get _canSubmit {
-  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-  return _nicknameController.text.trim().length >= 2 &&
-      emailRegex.hasMatch(_emailController.text.trim()) && 
-      _passwordController.text.length >= 8 &&
-      _agreedToTerms;
-}
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    return _nicknameController.text.trim().length >= 2 &&
+        emailRegex.hasMatch(_emailController.text.trim()) &&
+        _passwordController.text.length >= 8 &&
+        _agreedToTerms;
+  }
 
-void _submitForm() {
-  final isValid = _formKey.currentState?.validate() ?? false;
-  if (!isValid || !_agreedToTerms) return;
+  void _submitForm() {
+    final isValid = _formKey.currentState?.validate() ?? false;
+    if (!isValid || !_agreedToTerms) return;
 
-  FocusScope.of(context).unfocus();
-  
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('회원가입이 완료되었습니다!')),
-  );
+    FocusScope.of(context).unfocus();
 
-  context.go('/home'); 
-}
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('회원가입이 완료되었습니다!')),
+    );
+
+    context.go('/home');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -127,6 +130,25 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
+// 사용 가능 문구
+class _SuccessText extends StatelessWidget {
+  const _SuccessText(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: Color(0xFF2E7D32),
+      ),
+    );
+  }
+}
+
 // 통 커스텀 위젯 구현
 class _CustomInputField extends StatelessWidget {
   final String label;
@@ -140,6 +162,11 @@ class _CustomInputField extends StatelessWidget {
   final VoidCallback onChanged;
   final ValueChanged<String>? onFieldSubmitted;
 
+  // 6주차 추가
+  final String? errorText; // ViewModel의 중복 확인 에러 문구
+  final Widget? trailing; // 입력창 오른쪽 버튼
+  final Widget? footer; // 입력창 아래 안내 문구
+
   const _CustomInputField({
     required this.label,
     required this.hintText,
@@ -151,6 +178,9 @@ class _CustomInputField extends StatelessWidget {
     required this.validator,
     required this.onChanged,
     this.onFieldSubmitted,
+    this.errorText,
+    this.trailing,
+    this.footer,
   });
 
   @override
@@ -163,44 +193,66 @@ class _CustomInputField extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
         const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          decoration: InputDecoration(
-            hintText: hintText,
-            filled: true,
-            fillColor: Colors.grey[100],
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(0xFF6B4EFF),
-                width: 1.5,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: controller,
+                focusNode: focusNode,
+                obscureText: obscureText,
+                keyboardType: keyboardType,
+                textInputAction: textInputAction,
+                decoration: InputDecoration(
+                  hintText: hintText,
+                  errorText: errorText,
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF6B4EFF),
+                      width: 1.5,
+                    ),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.red),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide:
+                        const BorderSide(color: Colors.red, width: 1.5),
+                  ),
+                ),
+                validator: validator,
+                onChanged: (_) => onChanged(),
+                onFieldSubmitted: onFieldSubmitted,
               ),
             ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Colors.red),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Colors.red, width: 1.5),
-            ),
-          ),
-          validator: validator,
-          onChanged: (_) => onChanged(),
-          onFieldSubmitted: onFieldSubmitted,
+            if (trailing != null) ...[
+              const SizedBox(width: 8),
+              // 입력창 높이와 맞추기 위한 미세 조정
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: trailing!,
+              ),
+            ],
+          ],
         ),
+        if (footer != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 12, top: 6),
+            child: footer!,
+          ),
       ],
     );
   }
@@ -228,6 +280,8 @@ class _FormInputFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final vm = context.watch<SignUpViewModel>();
+
     return Column(
       children: [
         _CustomInputField(
@@ -235,13 +289,27 @@ class _FormInputFields extends StatelessWidget {
           hintText: '닉네임을 입력해주세요',
           controller: nicknameController,
           textInputAction: TextInputAction.next,
+          errorText: vm.nicknameErrorText,
+          trailing: MovieLogButton(
+            label: '중복 확인',
+            isLoading: vm.nicknameCheckStatus == CheckStatus.checking,
+            onPressed: vm.canCheckNickname
+                ? () => vm.checkNickname(nicknameController.text)
+                : null,
+          ),
+          footer: vm.nicknameCheckStatus == CheckStatus.available
+              ? const _SuccessText('사용할 수 있는 닉네임입니다.')
+              : null,
           validator: (v) {
             final val = v?.trim() ?? '';
             if (val.isEmpty) return '닉네임을 입력해주세요.';
             if (val.length < 2) return '닉네임은 2자 이상이어야 합니다.';
             return null;
           },
-          onChanged: onChanged,
+          onChanged: () {
+            vm.onNicknameChanged(nicknameController.text);
+            onChanged();
+          },
           onFieldSubmitted: (_) =>
               FocusScope.of(context).requestFocus(emailFocusNode),
         ),
@@ -253,17 +321,30 @@ class _FormInputFields extends StatelessWidget {
           focusNode: emailFocusNode,
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
+          errorText: vm.emailErrorText,
+          trailing: MovieLogButton(
+            label: '중복 확인',
+            isLoading: vm.emailCheckStatus == CheckStatus.checking,
+            onPressed: vm.canCheckEmail
+                ? () => vm.checkEmail(emailController.text)
+                : null,
+          ),
+          footer: vm.emailCheckStatus == CheckStatus.available
+              ? const _SuccessText('사용할 수 있는 이메일입니다.')
+              : null,
           validator: (v) {
-  final val = v?.trim() ?? '';
-  if (val.isEmpty) return '이메일을 입력해주세요.';
-  
+            final val = v?.trim() ?? '';
+            if (val.isEmpty) return '이메일을 입력해주세요.';
 
-  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-  if (!emailRegex.hasMatch(val)) return '올바른 이메일 형식이 아닙니다.';
-  
-  return null;
-},
-          onChanged: onChanged,
+            final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+            if (!emailRegex.hasMatch(val)) return '올바른 이메일 형식이 아닙니다.';
+
+            return null;
+          },
+          onChanged: () {
+            vm.onEmailChanged(emailController.text);
+            onChanged();
+          },
           onFieldSubmitted: (_) =>
               FocusScope.of(context).requestFocus(passwordFocusNode),
         ),
@@ -321,29 +402,11 @@ class _TermsAndSubmitSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        SizedBox(
+        // 전체 너비 버튼: width: double.infinity
+        MovieLogButton(
+          label: '가입하기',
           width: double.infinity,
-          height: 48,
-          child:ElevatedButton(
-  // ✅ canSubmit 조건에 따라 버튼 활성화/비활성화 및 제출 함수 연결
-  onPressed: canSubmit ? onSubmit : null,
-  style: ElevatedButton.styleFrom(
-    backgroundColor: const Color(0xFF6B4EFF),
-    disabledBackgroundColor: const Color(0xFFCCC5E9),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(8),
-    ),
-    elevation: 0,
-  ),
-  child: const Text(
-    '가입하기',
-    style: TextStyle(
-      color: Colors.white,
-      fontSize: 16,
-      fontWeight: FontWeight.bold,
-    ),
-  ),
-          ),
+          onPressed: canSubmit ? onSubmit : null,
         ),
       ],
     );
