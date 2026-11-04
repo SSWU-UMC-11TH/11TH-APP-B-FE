@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data/services/tmdb_movie_service.dart';
 import 'package:flutter_application_1/view_models/movie_home_view_model.dart';
 import 'package:flutter_application_1/view_models/movie_list_view_model.dart';
@@ -11,6 +12,7 @@ import '../screen/home_screen.dart';
 import '../screen/movie_list_screen.dart';
 import '../screen/movie_detail_screen.dart';
 import '../screen/my_page_screen.dart';
+import 'package:flutter_application_1/data/models/tmdb_movie_dto.dart';
 
 class AppRouter {
   AppRouter._();
@@ -54,8 +56,16 @@ class AppRouter {
     GoRoute(
       path: ':movieId',
       builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['movieId'] ?? '') ?? 0;
-        return MovieDetailScreen(movieId: id);
+        // 목록에서 넘겨준 TMDB 영화 데이터
+        final movie = state.extra as TmdbMovieDto?;
+
+        if (movie == null) {
+          return Scaffold(
+            appBar: AppBar(),
+            body: const Center(child: Text('영화를 찾을 수 없습니다.')),
+          );
+        }
+        return MovieDetailScreen(movie: movie);
       },
     ),
   ],
