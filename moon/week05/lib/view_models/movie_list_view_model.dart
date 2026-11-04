@@ -1,4 +1,3 @@
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
@@ -31,9 +30,13 @@ class MovieListViewModel extends ChangeNotifier {
 
   bool get isLoading => status == MovieListLoadStatus.loading;
 
+  bool _isInvalidRequest(int version) =>
+      _disposed || version != _requestVersion;
+
   // Discover API를 반복 호출하여 최대 30개 수집
   Future<List<TmdbMovieDto>> fetchUpToThirtyMovies({
     int? genreId,
+    int? requestVersion,
   }) async {
     final byId = <int, TmdbMovieDto>{};
 
@@ -41,12 +44,25 @@ class MovieListViewModel extends ChangeNotifier {
     var hasNextPage = true;
 
     while (byId.length < 30 && hasNextPage) {
+      // 화면 종료나 새 요청 발생 시 불필요한 추가 호출 방지
+      if (_disposed ||
+          (requestVersion != null &&
+              requestVersion != _requestVersion)) {
+        return byId.values.take(30).toList();
+      }
+
       final page = await _service.discoverMovies(
         page: pageNumber,
         genreId: genreId,
       );
 
-      // TMDB 영화 ID를 기준으로 중복 제거
+      if (_disposed ||
+          (requestVersion != null &&
+              requestVersion != _requestVersion)) {
+        return byId.values.take(30).toList();
+      }
+
+      // TMDB 영화 ID 기준 중복 제거
       for (final movie in page.results) {
         byId.putIfAbsent(movie.id, () => movie);
 
@@ -64,22 +80,49 @@ class MovieListViewModel extends ChangeNotifier {
     return byId.values.take(30).toList();
   }
 
+  // 장르 목록 요청 (실패해도 영화 조회에 영향 없음)
+  Future<void> _loadGenres(int version) async {
+    try {
+      final result = await _service.fetchGenres();
+
+      if (_isInvalidRequest(version)) return;
+
+      genres = result;
+    } on DioException {
+      if (_isInvalidRequest(version)) return;
+
+      debugPrint('[MovieList] 장르 API 요청 실패');
+    } catch (error) {
+      if (_isInvalidRequest(version)) return;
+
+      debugPrint(
+        '[MovieList] 장르 데이터 처리 오류: ${error.runtimeType}',
+      );
+    }
+  }
+
   // 첫 화면 진입 시 장르와 영화 목록 조회
   Future<void> loadInitial() async {
+    if (_disposed) return;
+
     final version = ++_requestVersion;
 
     status = MovieListLoadStatus.loading;
     message = null;
     notifyListeners();
 
-    try {
-      genres = await _service.fetchGenres();
+    // 장르 실패와 무관하게 영화 목록 조회
+    await _loadGenres(version);
 
+    if (_isInvalidRequest(version)) return;
+
+    try {
       final result = await fetchUpToThirtyMovies(
         genreId: selectedGenreId,
+        requestVersion: version,
       );
 
-      if (_disposed || version != _requestVersion) return;
+      if (_isInvalidRequest(version)) return;
 
       movies = result;
 
@@ -87,27 +130,28 @@ class MovieListViewModel extends ChangeNotifier {
           ? MovieListLoadStatus.empty
           : MovieListLoadStatus.success;
     } on DioException {
-      if (_disposed || version != _requestVersion) return;
+      if (_isInvalidRequest(version)) return;
 
       status = MovieListLoadStatus.error;
       message = '영화를 불러오지 못했어요. 다시 시도해 주세요.';
     } catch (error) {
-      if (_disposed || version != _requestVersion) return;
+      if (_isInvalidRequest(version)) return;
 
       status = MovieListLoadStatus.error;
       message = '영화 데이터를 처리하는 중 문제가 발생했어요.';
 
-      debugPrint('[MovieListViewModel 오류] ${error.runtimeType}');
+      debugPrint(
+        '[MovieListViewModel 오류] ${error.runtimeType}',
+      );
     }
 
-    if (!_disposed && version == _requestVersion) {
+    if (!_isInvalidRequest(version)) {
       notifyListeners();
     }
   }
 
   // 장르 선택 시 Discover API 재조회
   Future<void> selectGenre(int? genreId) async {
-    // API 요청 중에는 장르 변경 방지
     if (isLoading || _disposed) return;
 
     selectedGenreId = genreId;
@@ -121,9 +165,10 @@ class MovieListViewModel extends ChangeNotifier {
     try {
       final result = await fetchUpToThirtyMovies(
         genreId: genreId,
+        requestVersion: version,
       );
 
-      if (_disposed || version != _requestVersion) return;
+      if (_isInvalidRequest(version)) return;
 
       movies = result;
 
@@ -131,35 +176,36 @@ class MovieListViewModel extends ChangeNotifier {
           ? MovieListLoadStatus.empty
           : MovieListLoadStatus.success;
     } on DioException {
-      if (_disposed || version != _requestVersion) return;
+      if (_isInvalidRequest(version)) return;
 
       status = MovieListLoadStatus.error;
       message = '해당 장르 영화를 불러오지 못했어요.';
     } catch (error) {
-      if (_disposed || version != _requestVersion) return;
+      if (_isInvalidRequest(version)) return;
 
       status = MovieListLoadStatus.error;
       message = '영화 데이터를 처리하는 중 문제가 발생했어요.';
 
-      debugPrint('[MovieListViewModel 오류] ${error.runtimeType}');
+      debugPrint(
+        '[MovieListViewModel 오류] ${error.runtimeType}',
+      );
     }
 
-    if (!_disposed && version == _requestVersion) {
+    if (!_isInvalidRequest(version)) {
       notifyListeners();
     }
   }
 
-  // 마지막으로 선택한 장르 조건으로 재시도
+  // 마지막 선택 장르 기준 재시도
   Future<void> retry() async {
     if (isLoading || _disposed) return;
 
-    // 첫 조회에서 장르 목록을 받지 못한 경우
+    // 장르 목록이 없으면 다시 조회를 시도하되,
+    // 실패하더라도 영화 목록은 조회함
     if (genres.isEmpty) {
       await loadInitial();
       return;
     }
-
-    final genreId = selectedGenreId;
 
     final version = ++_requestVersion;
 
@@ -169,26 +215,34 @@ class MovieListViewModel extends ChangeNotifier {
 
     try {
       final result = await fetchUpToThirtyMovies(
-        genreId: genreId,
+        genreId: selectedGenreId,
+        requestVersion: version,
       );
 
-      if (_disposed || version != _requestVersion) return;
+      if (_isInvalidRequest(version)) return;
 
       movies = result;
 
       status = movies.isEmpty
           ? MovieListLoadStatus.empty
           : MovieListLoadStatus.success;
-    } catch (error) {
-      if (_disposed || version != _requestVersion) return;
+    } on DioException {
+      if (_isInvalidRequest(version)) return;
 
       status = MovieListLoadStatus.error;
       message = '영화를 다시 불러오지 못했어요.';
+    } catch (error) {
+      if (_isInvalidRequest(version)) return;
 
-      debugPrint('[MovieList 재시도 오류] ${error.runtimeType}');
+      status = MovieListLoadStatus.error;
+      message = '영화 데이터를 처리하는 중 문제가 발생했어요.';
+
+      debugPrint(
+        '[MovieList 재시도 오류] ${error.runtimeType}',
+      );
     }
 
-    if (!_disposed && version == _requestVersion) {
+    if (!_isInvalidRequest(version)) {
       notifyListeners();
     }
   }
