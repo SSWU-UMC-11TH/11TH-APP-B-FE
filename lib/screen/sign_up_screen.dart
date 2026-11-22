@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data/models/create_member_request.dart';
-import 'package:flutter_application_1/view_models/learning_member_session.dart';
 import 'package:flutter_application_1/view_models/sign_up_view_model.dart';
 import 'package:flutter_application_1/widgets/movielog_button.dart';
 import 'package:go_router/go_router.dart';
@@ -84,11 +83,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final memberId = vm.createdMemberId;
     if (vm.submitStatus == SubmitStatus.success && memberId != null) {
-      context.read<LearningMemberSession>().setMemberId(memberId);
+      // 8주차: 가입 후에는 로그인해서 토큰을 받아야 보호 화면에 들어갈 수 있습니다.
       messenger.showSnackBar(
-        SnackBar(content: Text('회원가입이 완료되었습니다! (memberId: $memberId)')),
+        const SnackBar(content: Text('회원가입이 완료되었습니다! 로그인해 주세요.')),
       );
-      context.go('/movies');
+      context.go('/login');
       return;
     }
     final message = vm.snackbarMessage;
