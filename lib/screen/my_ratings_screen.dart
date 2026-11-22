@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data/models/rating_dto.dart';
 import '../data/models/rating_with_movie.dart';
+import '../data/services/rating_api_service.dart';
 import '../view_models/my_ratings_view_model.dart';
+import '../widgets/movielog_button.dart';
+import '../widgets/rating_dialog.dart';
 import '../widgets/status/movie_loading_widget.dart';
 import '../widgets/tmdb_poster_image.dart';
 
@@ -32,8 +36,11 @@ class MyRatingsScreen extends StatelessWidget {
             MyRatingsLoadStatus.idle ||
             MyRatingsLoadStatus.loading =>
               const MovieLoadingWidget(),
+            // 저장 성공 후 GET만 실패했다면 "조회만 다시 시도" 안내를 보여줍니다.
             MyRatingsLoadStatus.error => _ErrorView(
-                message: vm.message ?? '평점을 불러오지 못했습니다.',
+                message:
+                    vm.refreshWarning ?? vm.message ?? '평점을 불러오지 못했습니다.',
+                retryLabel: vm.refreshWarning != null ? '목록 다시 불러오기' : '다시 시도',
                 onRetry: () => context.read<MyRatingsViewModel>().load(),
               ),
             MyRatingsLoadStatus.empty => const Center(
@@ -53,10 +60,156 @@ class MyRatingsScreen extends StatelessWidget {
   }
 }
 
+/// 수정: 기존 score·comment를 채운 RatingDialog를 다시 엽니다.
+Future<void> onEditPressed(BuildContext context, RatingDto rating) async {
+  // 저장 후 목록이 다시 그려지면 카드의 context가 사라질 수 있으므로 먼저 잡아 둡니다.
+  final viewModel = context.read<MyRatingsViewModel>();
+  final messenger = ScaffoldMessenger.of(context);
+
+  final saved = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false, // 저장 중 바깥 탭으로 닫히는 것도 막습니다.
+    builder: (_) => RatingDialog(
+      title: '평점을 수정해 주세요',
+      initialScore: rating.score,
+      initialComment: rating.comment, // null이면 TextField가 빈 칸으로 시작합니다.
+      onSubmit: (score, comment) => viewModel.updateRating(
+        ratingId: rating.ratingId,
+        score: score,
+        comment: comment,
+      ),
+    ),
+  );
+
+  if (saved != true) return;
+  messenger.showSnackBar(
+    const SnackBar(content: Text('평점을 수정했습니다.')),
+  );
+}
+
+/// 삭제: 확인 Dialog를 거치고, 삭제 요청 중에는 Dialog를 유지합니다.
+Future<void> onDeletePressed(BuildContext context, RatingDto rating) async {
+  final viewModel = context.read<MyRatingsViewModel>();
+  final messenger = ScaffoldMessenger.of(context);
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false, // 삭제 중 바깥 탭으로 닫히는 것도 막습니다.
+    builder: (_) => _DeleteRatingDialog(
+      onConfirm: () => viewModel.deleteRating(rating.ratingId),
+    ),
+  );
+
+  // confirmed는 실제로 삭제까지 마쳤을 때만 true입니다. 취소하면 API 요청이 없습니다.
+  if (confirmed != true) return;
+  messenger.showSnackBar(
+    const SnackBar(content: Text('평점을 삭제했습니다.')),
+  );
+}
+
+class _DeleteRatingDialog extends StatefulWidget {
+  const _DeleteRatingDialog({required this.onConfirm});
+
+  final Future<void> Function() onConfirm;
+
+  @override
+  State<_DeleteRatingDialog> createState() => _DeleteRatingDialogState();
+}
+
+class _DeleteRatingDialogState extends State<_DeleteRatingDialog> {
+  bool _isDeleting = false;
+  String? _errorText;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_isDeleting,
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '평점을 삭제할까요?',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '삭제한 평점은 복구할 수 없습니다.',
+                style: TextStyle(color: Colors.black54),
+              ),
+              if (_errorText != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _errorText!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red, fontSize: 13),
+                ),
+              ],
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: MovieLogButton(
+                      label: '취소',
+                      onPressed: _isDeleting
+                          ? null
+                          : () => Navigator.pop(context, false),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: MovieLogButton(
+                      label: '삭제',
+                      isLoading: _isDeleting,
+                      onPressed: _isDeleting ? null : _onConfirm,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onConfirm() async {
+    setState(() {
+      _isDeleting = true;
+      _errorText = null;
+    });
+    try {
+      await widget.onConfirm();
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is RatingActionException
+          ? error.message
+          : '삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+      setState(() {
+        _isDeleting = false;
+        _errorText = message;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
+}
+
 class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
+  const _ErrorView({
+    required this.message,
+    required this.retryLabel,
+    required this.onRetry,
+  });
 
   final String message;
+  final String retryLabel;
   final VoidCallback onRetry;
 
   @override
@@ -69,7 +222,7 @@ class _ErrorView extends StatelessWidget {
           children: [
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: onRetry, child: const Text('다시 시도')),
+            ElevatedButton(onPressed: onRetry, child: Text(retryLabel)),
           ],
         ),
       ),
@@ -195,6 +348,22 @@ class _RatingCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          // 카드 오른쪽: 개별 수정·삭제 버튼 (이 목록은 본인 memberId로 조회한 평점입니다)
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: '수정',
+                icon: const Icon(Icons.edit_outlined, color: Color(0xFF6B4EFF)),
+                onPressed: () => onEditPressed(context, rating),
+              ),
+              IconButton(
+                tooltip: '삭제',
+                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                onPressed: () => onDeletePressed(context, rating),
+              ),
+            ],
           ),
         ],
       ),
