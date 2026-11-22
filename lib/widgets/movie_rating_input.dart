@@ -1,26 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
+/// 7주차 서버 연동 모드: v6 score는 1~5 정수이므로 반 점 입력을 막습니다.
 class MovieRatingInput extends StatelessWidget {
   const MovieRatingInput({
     super.key,
     required this.rating,
     required this.onChanged,
+    this.enabled = true,
   });
 
   final double rating;
   final ValueChanged<double> onChanged;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
+    // RatingBar.builder는 항상 double을 돌려주지만 1.0, 2.0처럼 정수 단위로만 전달됩니다.
     return RatingBar.builder(
       initialRating: rating,
-      minRating: 0.5,
-      allowHalfRating: true,
+      minRating: 1,
+      allowHalfRating: false,
+      ignoreGestures: !enabled,
       itemCount: 5,
       itemSize: 40,
       itemBuilder: (context, index) {
-        return const Icon(Icons.star, color: Colors.amber);
+        return const Icon(Icons.star, color: Color(0xFF6B4EFF));
       },
       onRatingUpdate: onChanged,
     );
