@@ -36,17 +36,19 @@ class MyRatingsScreen extends StatelessWidget {
             MyRatingsLoadStatus.idle ||
             MyRatingsLoadStatus.loading =>
               const MovieLoadingWidget(),
-            // 저장 성공 후 GET만 실패했다면 "조회만 다시 시도" 안내를 보여줍니다.
             MyRatingsLoadStatus.error => _ErrorView(
-                message:
-                    vm.refreshWarning ?? vm.message ?? '평점을 불러오지 못했습니다.',
-                retryLabel: vm.refreshWarning != null ? '목록 다시 불러오기' : '다시 시도',
+                message: vm.message ?? '평점을 불러오지 못했습니다.',
+                retryLabel: '다시 시도',
                 onRetry: () => context.read<MyRatingsViewModel>().load(),
               ),
             MyRatingsLoadStatus.empty => const Center(
-                child: Text(
-                  '등록된 평점이 없습니다.',
-                  style: TextStyle(color: Colors.black54),
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    '이번 로그인에서 등록한 평점이 없습니다.\n영화 상세에서 평점을 남겨 보세요.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.black54, height: 1.5),
+                  ),
                 ),
               ),
             MyRatingsLoadStatus.success => _RatingList(
@@ -240,6 +242,20 @@ class _RatingList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // v7에는 토큰 기반 "내 평점 목록 GET"이 없어 현재 세션에서 등록한 평점만 보여줍니다.
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1ECFF),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Text(
+            '이번 로그인 중에 등록한 평점이에요. 앱을 다시 시작하면 목록이 비워질 수 있어요.',
+            style: TextStyle(fontSize: 12),
+          ),
+        ),
         if (notice != null)
           Container(
             width: double.infinity,
@@ -349,7 +365,7 @@ class _RatingCard extends StatelessWidget {
               ],
             ),
           ),
-          // 카드 오른쪽: 개별 수정·삭제 버튼 (이 목록은 본인 memberId로 조회한 평점입니다)
+          // 카드 오른쪽: 개별 수정·삭제 버튼 (현재 세션에서 본인이 등록한 평점입니다)
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
