@@ -120,6 +120,8 @@ class SignUpViewModel extends ChangeNotifier {
   }
 
   // 닉네임 중복 확인
+  
+  // 닉네임 중복 확인
   Future<void> checkNickname(String value) async {
     final requested = value.trim();
 
@@ -149,7 +151,8 @@ class SignUpViewModel extends ChangeNotifier {
           ? CheckStatus.available
           : CheckStatus.duplicated;
 
-      nicknameErrorText = available ? null : '이미 사용 중인 닉네임입니다.';
+      nicknameErrorText =
+          available ? null : '이미 사용 중인 닉네임입니다.';
 
       if (!available) {
         _duplicatedNickname = requested;
@@ -162,7 +165,22 @@ class SignUpViewModel extends ChangeNotifier {
       }
 
       nicknameCheckStatus = CheckStatus.error;
-      nicknameErrorText = '중복 확인에 실패했습니다. 다시 시도해 주세요.';
+      nicknameErrorText =
+          '중복 확인에 실패했습니다. 다시 시도해 주세요.';
+    } catch (error) {
+      if (_disposed ||
+          version != _nicknameRequestVersion ||
+          _currentNickname != requested) {
+        return;
+      }
+
+      nicknameCheckStatus = CheckStatus.error;
+      nicknameErrorText =
+          '닉네임 확인 중 오류가 발생했습니다. 다시 시도해 주세요.';
+
+      debugPrint(
+        '[닉네임 중복 확인 오류] ${error.runtimeType}',
+      );
     }
 
     if (!_disposed && version == _nicknameRequestVersion) {
@@ -170,6 +188,8 @@ class SignUpViewModel extends ChangeNotifier {
     }
   }
 
+  // 이메일 중복 확인
+  
   // 이메일 중복 확인
   Future<void> checkEmail(String value) async {
     final requested = value.trim();
@@ -200,7 +220,8 @@ class SignUpViewModel extends ChangeNotifier {
           ? CheckStatus.available
           : CheckStatus.duplicated;
 
-      emailErrorText = available ? null : '이미 사용 중인 이메일입니다.';
+      emailErrorText =
+          available ? null : '이미 사용 중인 이메일입니다.';
 
       if (!available) {
         _duplicatedEmail = requested;
@@ -213,13 +234,29 @@ class SignUpViewModel extends ChangeNotifier {
       }
 
       emailCheckStatus = CheckStatus.error;
-      emailErrorText = '중복 확인에 실패했습니다. 다시 시도해 주세요.';
+      emailErrorText =
+          '중복 확인에 실패했습니다. 다시 시도해 주세요.';
+    } catch (error) {
+      if (_disposed ||
+          version != _emailRequestVersion ||
+          _currentEmail != requested) {
+        return;
+      }
+
+      emailCheckStatus = CheckStatus.error;
+      emailErrorText =
+          '이메일 확인 중 오류가 발생했습니다. 다시 시도해 주세요.';
+
+      debugPrint(
+        '[이메일 중복 확인 오류] ${error.runtimeType}',
+      );
     }
 
     if (!_disposed && version == _emailRequestVersion) {
       notifyListeners();
     }
   }
+
 
   // 7주차: 실제 회원가입 POST
   Future<void> submit(CreateMemberRequest request) async {
