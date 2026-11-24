@@ -127,6 +127,8 @@ class SignUpViewModel extends ChangeNotifier {
       nicknameCheckStatus = CheckStatus.error;
       nicknameErrorText =
           '중복 확인에 실패했습니다. 다시 시도해 주세요.';
+      
+     debugPrint('[닉네임 중복 확인 오류] ${error.runtimeType}');
     }
 
     if (!_disposed &&
@@ -181,8 +183,10 @@ class SignUpViewModel extends ChangeNotifier {
       emailCheckStatus = CheckStatus.error;
       emailErrorText =
           '중복 확인에 실패했습니다. 다시 시도해 주세요.';
-    }
 
+      debugPrint('[이메일 중복 확인 오류] ${error.runtimeType}');
+      }
+  
     if (!_disposed &&
         version == _emailRequestVersion) {
       notifyListeners();
