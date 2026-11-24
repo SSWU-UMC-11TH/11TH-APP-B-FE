@@ -199,9 +199,10 @@ class MyRatingsScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             itemCount: viewModel.ratings.length,
             separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
+            
+            itemBuilder: (itemContext, index) {
               final item = viewModel.ratings[index];
-
+  
               return _RatingCard(
                 item: item,
                 enabled: !viewModel.isMutating,
@@ -209,6 +210,7 @@ class MyRatingsScreen extends StatelessWidget {
                 onDelete: () => _deleteRating(context, viewModel, item),
               );
             },
+
           ),
         );
     }
