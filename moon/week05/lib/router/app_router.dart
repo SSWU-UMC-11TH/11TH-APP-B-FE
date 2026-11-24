@@ -1,4 +1,4 @@
-
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -25,15 +25,13 @@ class AppRouter {
       // 시작 화면
       GoRoute(
         path: '/',
-        builder: (context, state) =>
-            const StartScreen(),
+        builder: (context, state) => const StartScreen(),
       ),
 
       // 회원가입
       GoRoute(
         path: '/signup',
-        builder: (context, state) =>
-            const SignUpScreen(),
+        builder: (context, state) => const SignUpScreen(),
       ),
 
       // 홈 - TMDB Popular API
@@ -41,10 +39,9 @@ class AppRouter {
         path: '/home',
         builder: (context, state) =>
             ChangeNotifierProvider<MovieHomeViewModel>(
-          create: (context) =>
-              MovieHomeViewModel(
-                context.read<TmdbMovieService>(),
-              )..loadPopular(),
+          create: (context) => MovieHomeViewModel(
+            context.read<TmdbMovieService>(),
+          )..loadPopular(),
           child: const MainScreen(
             currentIndex: 0,
             child: HomeScreen(),
@@ -57,10 +54,9 @@ class AppRouter {
         path: '/movies',
         builder: (context, state) =>
             ChangeNotifierProvider<MovieListViewModel>(
-          create: (context) =>
-              MovieListViewModel(
-                context.read<TmdbMovieService>(),
-              )..loadInitial(),
+          create: (context) => MovieListViewModel(
+            context.read<TmdbMovieService>(),
+          )..loadInitial(),
           child: const MainScreen(
             currentIndex: 1,
             child: MovieListScreen(),
@@ -71,8 +67,7 @@ class AppRouter {
       // 마이 페이지
       GoRoute(
         path: '/mypage',
-        builder: (context, state) =>
-            const MainScreen(
+        builder: (context, state) => const MainScreen(
           currentIndex: 2,
           child: MyPageScreen(),
         ),
@@ -86,10 +81,22 @@ class AppRouter {
             state.pathParameters['movieId'] ?? '',
           );
 
-          final movie = mockMovies.firstWhere(
-            (movie) => movie.id == movieId,
-            orElse: () => mockMovies.first,
-          );
+          // ID가 유효하지 않으면 null 반환
+          final movie = movieId == null
+              ? null
+              : findMovieById(movieId);
+
+          // 존재하지 않는 영화 ID 처리
+          if (movie == null) {
+            return const Scaffold(
+              body: Center(
+                child: Text(
+                  '영화를 찾을 수 없습니다.',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            );
+          }
 
           return MovieDetailScreen(
             movie: movie,
