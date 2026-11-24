@@ -77,3 +77,13 @@ const List<Movie> mockMovies = [
         '도시를 위협하는 거대한 사건 속에서 주인공이 위험천만한 임무에 뛰어드는 액션 어드벤처입니다.',
   ),
 ];
+
+Movie? findMovieById(int id) {
+  for (final movie in mockMovies) {
+    if (movie.id == id) {
+      return movie;
+    }
+  }
+
+  return null;
+}
