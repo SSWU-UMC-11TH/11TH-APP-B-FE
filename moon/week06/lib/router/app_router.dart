@@ -110,15 +110,16 @@ class AppRouter {
             (movie) => movie.id == movieId,
           );
 
-          // 유효하지 않은 ID로 잘못된 영화가 표시되는 문제 방지
-          if (matches.isEmpty) {
-            throw Exception('존재하지 않는 영화입니다.');
-          }
-
-          return MovieDetailScreen(
-            movie: matches.first,
+         if (matches.isEmpty) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('영화 상세'),
+            ),
+            body: const Center(
+              child: Text('영화를 찾을 수 없습니다.'),
+            ),
           );
-        },
+        }
       ),
     ],
   );
