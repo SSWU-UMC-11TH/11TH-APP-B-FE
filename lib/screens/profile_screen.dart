@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -84,6 +85,16 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+
+            // 6주차: 내가 등록한 평점(학습용 memberId 1) 화면으로 이동
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('내가 등록한 평점'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/my/ratings'),
             ),
           ],
         ),

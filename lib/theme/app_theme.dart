@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app_colors.dart';
+import 'app_text_styles.dart';
 
 abstract final class AppTheme {
   static final ThemeData light = ThemeData(
     useMaterial3: true,
     fontFamily: 'Manrope',
     scaffoldBackgroundColor: AppColors.warmWhite,
+    primaryColor: AppColors.primary,
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.warmWhite,
       foregroundColor: AppColors.black,
@@ -16,11 +18,20 @@ abstract final class AppTheme {
       scrolledUnderElevation: 0,
       shadowColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
+      titleTextStyle: AppTextStyles.appBarTitle,
       systemOverlayStyle: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
         statusBarBrightness: Brightness.light,
       ),
+    ),
+    // AppTextStyles를 ThemeData 기본 TextTheme에 매핑
+    textTheme: const TextTheme(
+      titleLarge: AppTextStyles.titleLarge,
+      titleMedium: AppTextStyles.titleMedium,
+      labelMedium: AppTextStyles.labelMedium,
+      bodyMedium: AppTextStyles.bodyMedium,
+      bodySmall: AppTextStyles.bodySmall,
     ),
   );
 }

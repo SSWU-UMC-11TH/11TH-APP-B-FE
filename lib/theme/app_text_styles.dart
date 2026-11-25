@@ -3,6 +3,13 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 abstract final class AppTextStyles {
+  // 상단 네비게이션 '회원가입' 전용 보라색 스타일
+  static const appBarTitle = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w700,
+    color: AppColors.violet,
+  );
+
   static const titleLarge = TextStyle(
     fontSize: 22,
     fontWeight: FontWeight.w700,
@@ -11,6 +18,13 @@ abstract final class AppTextStyles {
 
   static const titleMedium = TextStyle(
     fontSize: 18,
+    fontWeight: FontWeight.w700,
+    color: AppColors.black,
+  );
+
+  // 입력 필드 상단 라벨 (닉네임, 이메일, 비밀번호)
+  static const labelMedium = TextStyle(
+    fontSize: 15,
     fontWeight: FontWeight.w700,
     color: AppColors.black,
   );
