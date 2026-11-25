@@ -2,30 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../data/services/member_check_service.dart';
+import '../data/services/rating_api_service.dart';
 import '../data/services/tmdb_movie_service.dart';
 import '../models/movie_detail_args.dart';
 import '../screens/home_screen.dart';
 import '../screens/main_screen.dart';
 import '../screens/movie_detail_screen.dart';
 import '../screens/movie_list_screen.dart';
+import '../screens/my_ratings_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/sign_up_screen.dart';
 import '../screens/start_screen.dart';
 import '../view_models/movie_home_view_model.dart';
 import '../view_models/movie_list_view_model.dart';
+import '../view_models/my_ratings_view_model.dart';
+import '../view_models/sign_up_view_model.dart';
 
 class AppRouter {
   AppRouter._();
-  static final _rootNavigatorKey = GlobalKey<NavigatorState>();
+  // root Navigator를 가리키는 키를 클래스에서 한 번만 선언합니다.
+  static final rootNavigatorKey = GlobalKey<NavigatorState>();
 
   static final router = GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey, // GoRouter 전체가 사용할 root Navigator
     initialLocation: '/start',
     routes: [
       GoRoute(path: '/start', builder: (context, state) => const StartScreen()),
       GoRoute(
         path: '/register',
-        builder: (context, state) => const SignUpScreen(),
+        builder: (context, state) => ChangeNotifierProvider<SignUpViewModel>(
+          create: (context) =>
+              SignUpViewModel(context.read<MemberCheckService>()),
+          child: const SignUpScreen(),
+        ),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -62,7 +72,7 @@ class AppRouter {
                 routes: [
                   GoRoute(
                     path: ':movieId',
-                    parentNavigatorKey: _rootNavigatorKey,
+                    parentNavigatorKey: rootNavigatorKey,
                     builder: (context, state) {
                       final extra = state.extra;
                       return MovieDetailScreen(
@@ -81,6 +91,22 @@ class AppRouter {
               GoRoute(
                 path: '/my',
                 builder: (context, state) => const ProfileScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'ratings', // 최종 경로: /my/ratings
+                    // root Navigator 위에 표시해 하단 NavigationBar를 가립니다.
+                    parentNavigatorKey: rootNavigatorKey,
+                    builder: (context, state) =>
+                        ChangeNotifierProvider<MyRatingsViewModel>(
+                          create: (context) => MyRatingsViewModel(
+                            context.read<RatingApiService>(),
+                            context.read<TmdbMovieService>(),
+                            sampleMemberId, // 6주차는 학습용 ID 1입니다.
+                          )..load(),
+                          child: const MyRatingsScreen(),
+                        ),
+                  ),
+                ],
               ),
             ],
           ),
