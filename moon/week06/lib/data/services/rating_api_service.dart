@@ -1,0 +1,19 @@
+import 'package:dio/dio.dart';
+
+import '../models/rating_dto.dart';
+
+class RatingApiService {
+  RatingApiService(this._dio);
+
+  final Dio _dio;
+
+  Future<List<RatingDto>> getMemberRatings(int memberId) async {
+    final response = await _dio.get('/v5/members/$memberId/ratings');
+
+    final data = response.data as List<dynamic>;
+
+    return data
+        .map((item) => RatingDto.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+}
