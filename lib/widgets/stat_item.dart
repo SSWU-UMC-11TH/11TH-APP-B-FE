@@ -15,8 +15,9 @@ class StatItem extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: AppColors.statCardBg,
+          color: AppColors.white,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.lightViolet, width: 1.5),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

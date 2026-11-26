@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../data/models/create_member_request.dart';
+import '../view_models/learning_member_session.dart';
 import '../view_models/sign_up_view_model.dart';
 import '../widgets/movielog_button.dart';
 
@@ -14,8 +16,9 @@ const _border = Color(0xFFCBC4D2);
 const _fieldFill = Color(0xFFF5F3EF);
 const _errorColor = Color(0xFFB3261E);
 const _errorFill = Color(0xFFFFDAD6);
-const _successColor = Color(0xFF2E7D32); // 사용 가능 (초록)
-const _checkingColor = Color(0xFF1E6FD9); // 확인 중 (파랑)
+const _successColor = Color(0xFF2E7D32); // 사용 가능 안내 (초록)
+const _checkingColor = Color(0xFF1565C0); // 확인 중 안내 (파랑)
+const _disabledSubmit = Color(0xFFD3C6E3); // 비활성 가입하기 버튼
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -38,12 +41,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   static final _emailRegExp = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
 
-  bool get _nicknameValid => _nicknameController.text.trim().length >= 2;
-  bool get _emailValid => _emailRegExp.hasMatch(_emailController.text.trim());
-  bool get _passwordValid => _passwordController.text.length >= 8;
+  bool get _nicknameValid {
+    final length = _nicknameController.text.trim().length;
+    return length >= 2 && length <= 12; // 닉네임 2~12자
+  }
 
-  bool get _canSubmit =>
-      _nicknameValid && _emailValid && _passwordValid && _agreed;
+  bool get _emailValid => _emailRegExp.hasMatch(_emailController.text.trim());
+
+  // 8자 이상 + 소문자·대문자·숫자·특수문자(!@#$%^&*) 각각 하나 이상
+  bool get _passwordValid {
+    final value = _passwordController.text;
+    return value.length >= 8 &&
+        RegExp(r'[a-z]').hasMatch(value) &&
+        RegExp(r'[A-Z]').hasMatch(value) &&
+        RegExp(r'[0-9]').hasMatch(value) &&
+        RegExp(r'[!@#$%^&*]').hasMatch(value);
+  }
+
+  /// 로컬 검증 + 닉네임·이메일 중복 확인 통과 + 약관 동의 + 제출 중 아님
+  bool _canSubmit(SignUpViewModel viewModel) =>
+      _nicknameValid &&
+      _emailValid &&
+      _passwordValid &&
+      _agreed &&
+      viewModel.duplicateChecksPassed &&
+      !viewModel.isSubmitting;
 
   @override
   void dispose() {
@@ -53,13 +75,44 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  void _submit() {
-    if (!_canSubmit) return;
-    context.go('/home');
+  Future<void> _onSubmitPressed() async {
+    final viewModel = context.read<SignUpViewModel>();
+    if (!_canSubmit(viewModel)) return;
+    await viewModel.submit(
+      CreateMemberRequest(
+        email: _emailController.text,
+        password: _passwordController.text,
+        nickname: _nicknameController.text,
+      ),
+    );
+    if (!mounted) return;
+    if (viewModel.submitStatus == SubmitStatus.success &&
+        viewModel.createdMemberId != null) {
+      // 가입 결과의 memberId를 학습용 현재 회원 상태에 저장합니다.
+      context.read<LearningMemberSession>().setMemberId(
+        viewModel.createdMemberId!,
+      );
+      context.go('/movies');
+      return;
+    }
+    if (viewModel.snackbarMessage != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(viewModel.snackbarMessage!)));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // 제출 중에는 뒤로가기·스와이프 백으로 화면을 나갈 수 없습니다.
+    return Consumer<SignUpViewModel>(
+      builder: (context, viewModel, child) {
+        return PopScope(canPop: !viewModel.isSubmitting, child: child!);
+      },
+      child: _buildScaffold(),
+    );
+  }
+
+  Widget _buildScaffold() {
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
@@ -101,24 +154,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     controller: _nicknameController,
                                     touched: _nicknameTouched,
                                     valid: _nicknameValid,
-                                    errorText: '닉네임은 2자 이상이어야 합니다.',
+                                    errorText: '닉네임은 2~12자여야 합니다.',
                                     serverErrorText:
                                         viewModel.nicknameErrorText,
-                                    checked:
+                                    successText:
                                         viewModel.nicknameCheckStatus ==
-                                        CheckStatus.available,
-                                    statusText: switch (viewModel
-                                        .nicknameCheckStatus) {
-                                      CheckStatus.checking =>
-                                        '닉네임 사용 가능 여부를 확인 중입니다.',
-                                      CheckStatus.available => '사용 가능한 닉네임입니다.',
-                                      _ => null,
-                                    },
-                                    statusColor:
+                                            CheckStatus.available
+                                        ? '사용 가능한 닉네임입니다.'
+                                        : null,
+                                    checkingText:
                                         viewModel.nicknameCheckStatus ==
                                             CheckStatus.checking
-                                        ? _checkingColor
-                                        : _successColor,
+                                        ? '닉네임 사용 가능 여부를 확인 중입니다.'
+                                        : null,
                                     onChanged: (value) {
                                       setState(() => _nicknameTouched = true);
                                       viewModel.onNicknameChanged(value);
@@ -136,7 +184,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                           : null,
                                     ),
                                   ),
-                                  const SizedBox(height: 16),
+                                  const SizedBox(height: 8),
                                   _LabeledField(
                                     label: '이메일',
                                     controller: _emailController,
@@ -145,21 +193,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     valid: _emailValid,
                                     errorText: '올바른 이메일 형식이 아닙니다.',
                                     serverErrorText: viewModel.emailErrorText,
-                                    checked:
+                                    successText:
                                         viewModel.emailCheckStatus ==
-                                        CheckStatus.available,
-                                    statusText: switch (viewModel
-                                        .emailCheckStatus) {
-                                      CheckStatus.checking =>
-                                        '이메일 사용 가능 여부를 확인 중입니다.',
-                                      CheckStatus.available => '사용 가능한 이메일입니다.',
-                                      _ => null,
-                                    },
-                                    statusColor:
+                                            CheckStatus.available
+                                        ? '사용 가능한 이메일입니다.'
+                                        : null,
+                                    checkingText:
                                         viewModel.emailCheckStatus ==
                                             CheckStatus.checking
-                                        ? _checkingColor
-                                        : _successColor,
+                                        ? '이메일 사용 가능 여부를 확인 중입니다.'
+                                        : null,
                                     onChanged: (value) {
                                       setState(() => _emailTouched = true);
                                       viewModel.onEmailChanged(value);
@@ -176,21 +219,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                           : null,
                                     ),
                                   ),
+                                  const SizedBox(height: 8),
+                                  _LabeledField(
+                                    label: '비밀번호',
+                                    controller: _passwordController,
+                                    obscureText: true,
+                                    touched: _passwordTouched,
+                                    valid: _passwordValid,
+                                    errorText: '비밀번호는 대문자/소문자/숫자/특수문자를 포함한 8자 이상이어야 합니다.',
+                                    // 로컬 검사를 통과해도 서버 400(비밀번호)이면 에러로 보입니다.
+                                    serverErrorText:
+                                        viewModel.passwordErrorText,
+                                    onChanged: (_) {
+                                      setState(() => _passwordTouched = true);
+                                      viewModel.onPasswordChanged();
+                                    },
+                                  ),
                                 ],
                               );
                             },
-                          ),
-                          const SizedBox(height: 16),
-                          _LabeledField(
-                            label: '비밀번호',
-                            controller: _passwordController,
-                            obscureText: true,
-                            touched: _passwordTouched,
-                            valid: _passwordValid,
-                            errorText: '비밀번호는 8자 이상이어야 합니다.',
-                            onChanged: (_) => setState(() {
-                              _passwordTouched = true;
-                            }),
                           ),
                           const Spacer(),
                           const SizedBox(height: 32),
@@ -199,12 +246,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             onChanged: (v) => setState(() => _agreed = v),
                           ),
                           const SizedBox(height: 24),
-                          // Form 하단 버튼: 전체 너비
-                          // 실제 가입 요청은 이번 주차 범위가 아니라 유효하면 홈으로 이동만 한다.
-                          MovieLogButton(
-                            label: '가입하기',
-                            width: double.infinity,
-                            onPressed: _canSubmit ? _submit : null,
+                          // Form 하단 버튼: 전체 너비. 제출 중에는 로딩 + 중복 탭 방지
+                          Consumer<SignUpViewModel>(
+                            builder: (context, viewModel, child) {
+                              return MovieLogButton(
+                                label: '가입하기',
+                                width: double.infinity,
+                                height: 48,
+                                disabledBackgroundColor: _disabledSubmit,
+                                isLoading: viewModel.isSubmitting,
+                                onPressed: _canSubmit(viewModel)
+                                    ? _onSubmitPressed
+                                    : null,
+                              );
+                            },
                           ),
                           const SizedBox(height: 24),
                           const _LoginRow(),
@@ -237,13 +292,16 @@ class _Header extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: IconButton(
               icon: const Icon(Icons.arrow_back, color: _textMain),
-              onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/start');
-                }
-              },
+              // 제출 중에는 뒤로가기 버튼도 막습니다.
+              onPressed: context.watch<SignUpViewModel>().isSubmitting
+                  ? null
+                  : () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/start');
+                      }
+                    },
             ),
           ),
           const Text(
@@ -270,9 +328,8 @@ class _LabeledField extends StatelessWidget {
     required this.errorText,
     required this.onChanged,
     this.serverErrorText,
-    this.checked = false,
-    this.statusText,
-    this.statusColor = _successColor,
+    this.successText,
+    this.checkingText,
     this.trailing,
     this.keyboardType,
     this.obscureText = false,
@@ -289,12 +346,11 @@ class _LabeledField extends StatelessWidget {
   /// 서버 중복 확인 결과 문구 (ViewModel이 내려줌). 형식 검사를 통과해도 있으면 에러 상태.
   final String? serverErrorText;
 
-  /// 서버가 사용 가능하다고 확인했을 때만 입력창 안에 체크 표시
-  final bool checked;
+  /// 중복 확인 통과 문구 (초록)
+  final String? successText;
 
-  /// 입력창 아래 안내 문구 (확인 중 / 사용 가능)
-  final String? statusText;
-  final Color statusColor;
+  /// 중복 확인 중 문구 (파랑)
+  final String? checkingText;
 
   /// 입력창 오른쪽에 붙는 위젯 (중복 확인 버튼)
   final Widget? trailing;
@@ -306,7 +362,7 @@ class _LabeledField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showError = (touched && !valid) || serverErrorText != null;
-    final showCheck = checked && !showError;
+    final showCheck = touched && valid && serverErrorText == null;
 
     OutlineInputBorder border(Color color) => OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
@@ -388,20 +444,34 @@ class _LabeledField extends StatelessWidget {
               trailing!,
             ],
           ),
-        if (statusText != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              statusText!,
-              style: TextStyle(
-                fontSize: 12,
-                height: 16 / 12,
-                fontWeight: FontWeight.w600,
-                color: statusColor,
-              ),
-            ),
-          ),
+        if (checkingText != null)
+          _HelperText(checkingText!, color: _checkingColor)
+        else if (successText != null)
+          _HelperText(successText!, color: _successColor),
       ],
+    );
+  }
+}
+
+class _HelperText extends StatelessWidget {
+  const _HelperText(this.text, {required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          height: 16 / 12,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
     );
   }
 }
