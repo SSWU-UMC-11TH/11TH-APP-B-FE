@@ -1,7 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
+import '../data/models/create_member_request.dart';
+import '../view_models/learning_member_session.dart';
+import '../view_models/sign_up_view_model.dart';
+import '../widgets/movielog_button.dart';
+
+// Figma W2 회원가입 화면 기준 값
+const _bg = Color(0xFFFAF9F5);
+const _violet = Color(0xFF6750A4);
+const _textMain = Color(0xFF1D1B20);
+const _textSub = Color(0xFF494551);
+const _border = Color(0xFFCBC4D2);
+const _fieldFill = Color(0xFFF5F3EF);
+const _errorColor = Color(0xFFB3261E);
+const _errorFill = Color(0xFFFFDAD6);
+const _successColor = Color(0xFF2E7D32); // 사용 가능 안내 (초록)
+const _checkingColor = Color(0xFF1565C0); // 확인 중 안내 (파랑)
+const _disabledSubmit = Color(0xFFD3C6E3); // 비활성 가입하기 버튼
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -11,459 +28,526 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  final _formKey = GlobalKey<FormState>();
-
   final _nicknameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  final _emailFocusNode = FocusNode();
-  final _passwordFocusNode = FocusNode();
+  bool _agreed = false;
 
-  bool _agreedToTerms = false;
+  // 한 글자라도 입력한 뒤부터 에러/체크 상태를 보여준다
+  bool _nicknameTouched = false;
+  bool _emailTouched = false;
+  bool _passwordTouched = false;
+
+  static final _emailRegExp = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+
+  bool get _nicknameValid {
+    final length = _nicknameController.text.trim().length;
+    return length >= 2 && length <= 12; // 닉네임 2~12자
+  }
+
+  bool get _emailValid => _emailRegExp.hasMatch(_emailController.text.trim());
+
+  // 8자 이상 + 소문자·대문자·숫자·특수문자(!@#$%^&*) 각각 하나 이상
+  bool get _passwordValid {
+    final value = _passwordController.text;
+    return value.length >= 8 &&
+        RegExp(r'[a-z]').hasMatch(value) &&
+        RegExp(r'[A-Z]').hasMatch(value) &&
+        RegExp(r'[0-9]').hasMatch(value) &&
+        RegExp(r'[!@#$%^&*]').hasMatch(value);
+  }
+
+  /// 로컬 검증 + 닉네임·이메일 중복 확인 통과 + 약관 동의 + 제출 중 아님
+  bool _canSubmit(SignUpViewModel viewModel) =>
+      _nicknameValid &&
+      _emailValid &&
+      _passwordValid &&
+      _agreed &&
+      viewModel.duplicateChecksPassed &&
+      !viewModel.isSubmitting;
 
   @override
   void dispose() {
     _nicknameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _emailFocusNode.dispose();
-    _passwordFocusNode.dispose();
     super.dispose();
   }
 
-  bool _isNicknameValid(String val) => val.trim().length >= 2;
-  bool _isEmailValid(String val) {
-    final email = val.trim();
-    return email.contains('@') &&
-        email.contains('.') &&
-        email.indexOf('@') < email.lastIndexOf('.');
-  }
-
-  bool _isPasswordValid(String val) => val.length >= 8;
-
-  bool get _canSubmit {
-    return _isNicknameValid(_nicknameController.text) &&
-        _isEmailValid(_emailController.text) &&
-        _isPasswordValid(_passwordController.text) &&
-        _agreedToTerms;
-  }
-
-  void _submit() {
-    final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid) return;
-
-    FocusScope.of(context).unfocus();
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('회원가입이 완료되었습니다!'),
-        backgroundColor: AppColors.violet,
+  Future<void> _onSubmitPressed() async {
+    final viewModel = context.read<SignUpViewModel>();
+    if (!_canSubmit(viewModel)) return;
+    await viewModel.submit(
+      CreateMemberRequest(
+        email: _emailController.text,
+        password: _passwordController.text,
+        nickname: _nicknameController.text,
       ),
     );
+    if (!mounted) return;
+    if (viewModel.submitStatus == SubmitStatus.success &&
+        viewModel.createdMemberId != null) {
+      // 가입 결과의 memberId를 학습용 현재 회원 상태에 저장합니다.
+      context.read<LearningMemberSession>().setMemberId(
+        viewModel.createdMemberId!,
+      );
+      context.go('/movies');
+      return;
+    }
+    if (viewModel.snackbarMessage != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(viewModel.snackbarMessage!)));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // 제출 중에는 뒤로가기·스와이프 백으로 화면을 나갈 수 없습니다.
+    return Consumer<SignUpViewModel>(
+      builder: (context, viewModel, child) {
+        return PopScope(canPop: !viewModel.isSubmitting, child: child!);
+      },
+      child: _buildScaffold(),
+    );
+  }
+
+  Widget _buildScaffold() {
     return Scaffold(
-      backgroundColor: AppColors.warmWhite,
+      backgroundColor: _bg,
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final maxFormWidth = constraints.maxWidth >= 700
-                ? 560.0
-                : double.infinity;
-
-            return Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxFormWidth),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24.0,
-                    vertical: 12.0,
-                  ),
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  child: Form(
-                    key: _formKey,
-                    autovalidateMode:
-                        AutovalidateMode.onUserInteraction, // 실시간 유효성 검사
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const TopNavigationHeaderWidget(),
-                        const SizedBox(height: 32),
-
-                        const SignUpHeaderWidget(),
-                        const SizedBox(height: 32),
-
-                        SignUpFormFieldsWidget(
-                          nicknameController: _nicknameController,
-                          emailController: _emailController,
-                          passwordController: _passwordController,
-                          emailFocusNode: _emailFocusNode,
-                          passwordFocusNode: _passwordFocusNode,
-                          isNicknameValid: _isNicknameValid,
-                          isEmailValid: _isEmailValid,
-                          isPasswordValid: _isPasswordValid,
-                          onChanged: () => setState(() {}),
-                        ),
-                        const SizedBox(height: 28),
-
-                        TermsCheckboxWidget(
-                          value: _agreedToTerms,
-                          onChanged: (val) =>
-                              setState(() => _agreedToTerms = val ?? false),
-                        ),
-                        const SizedBox(height: 24),
-
-                        SizedBox(
-                          height: 52,
-                          child: ElevatedButton(
-                            onPressed: _canSubmit ? _submit : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.violet,
-                              disabledBackgroundColor: AppColors.disabledButton,
-                              foregroundColor: AppColors.white,
-                              disabledForegroundColor: AppColors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: const Text(
-                              '가입하기',
+        child: Column(
+          children: [
+            const _Header(),
+            Expanded(
+              child: CustomScrollView(
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 16),
+                            child: Text(
+                              '환영합니다!\n간단한 정보만 입력하고 시작해보세요.',
+                              textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                                height: 24 / 16,
+                                fontWeight: FontWeight.w500,
+                                color: _textSub,
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 28),
-
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              '이미 계정이 있나요? ',
-                              style: AppTextStyles.bodySmall,
-                            ),
-                            GestureDetector(
-                              onTap: () {},
-                              child: Text(
-                                '로그인',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.violet,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                      ],
+                          const SizedBox(height: 8),
+                          // ViewModel의 중복 확인 상태가 바뀌면 이 부분만 다시 그린다.
+                          Consumer<SignUpViewModel>(
+                            builder: (context, viewModel, child) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _LabeledField(
+                                    label: '닉네임',
+                                    controller: _nicknameController,
+                                    touched: _nicknameTouched,
+                                    valid: _nicknameValid,
+                                    errorText: '닉네임은 2~12자여야 합니다.',
+                                    serverErrorText:
+                                        viewModel.nicknameErrorText,
+                                    successText:
+                                        viewModel.nicknameCheckStatus ==
+                                            CheckStatus.available
+                                        ? '사용 가능한 닉네임입니다.'
+                                        : null,
+                                    checkingText:
+                                        viewModel.nicknameCheckStatus ==
+                                            CheckStatus.checking
+                                        ? '닉네임 사용 가능 여부를 확인 중입니다.'
+                                        : null,
+                                    onChanged: (value) {
+                                      setState(() => _nicknameTouched = true);
+                                      viewModel.onNicknameChanged(value);
+                                    },
+                                    // 입력창 옆 보조 버튼: width를 주지 않아 내용 기반 크기
+                                    trailing: MovieLogButton(
+                                      label: '중복 확인',
+                                      isLoading:
+                                          viewModel.nicknameCheckStatus ==
+                                          CheckStatus.checking,
+                                      onPressed: viewModel.canCheckNickname
+                                          ? () => viewModel.checkNickname(
+                                              _nicknameController.text,
+                                            )
+                                          : null,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _LabeledField(
+                                    label: '이메일',
+                                    controller: _emailController,
+                                    keyboardType: TextInputType.emailAddress,
+                                    touched: _emailTouched,
+                                    valid: _emailValid,
+                                    errorText: '올바른 이메일 형식이 아닙니다.',
+                                    serverErrorText: viewModel.emailErrorText,
+                                    successText:
+                                        viewModel.emailCheckStatus ==
+                                            CheckStatus.available
+                                        ? '사용 가능한 이메일입니다.'
+                                        : null,
+                                    checkingText:
+                                        viewModel.emailCheckStatus ==
+                                            CheckStatus.checking
+                                        ? '이메일 사용 가능 여부를 확인 중입니다.'
+                                        : null,
+                                    onChanged: (value) {
+                                      setState(() => _emailTouched = true);
+                                      viewModel.onEmailChanged(value);
+                                    },
+                                    trailing: MovieLogButton(
+                                      label: '중복 확인',
+                                      isLoading:
+                                          viewModel.emailCheckStatus ==
+                                          CheckStatus.checking,
+                                      onPressed: viewModel.canCheckEmail
+                                          ? () => viewModel.checkEmail(
+                                              _emailController.text,
+                                            )
+                                          : null,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _LabeledField(
+                                    label: '비밀번호',
+                                    controller: _passwordController,
+                                    obscureText: true,
+                                    touched: _passwordTouched,
+                                    valid: _passwordValid,
+                                    errorText: '비밀번호는 대문자/소문자/숫자/특수문자를 포함한 8자 이상이어야 합니다.',
+                                    // 로컬 검사를 통과해도 서버 400(비밀번호)이면 에러로 보입니다.
+                                    serverErrorText:
+                                        viewModel.passwordErrorText,
+                                    onChanged: (_) {
+                                      setState(() => _passwordTouched = true);
+                                      viewModel.onPasswordChanged();
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                          const Spacer(),
+                          const SizedBox(height: 32),
+                          _TermsCheckbox(
+                            checked: _agreed,
+                            onChanged: (v) => setState(() => _agreed = v),
+                          ),
+                          const SizedBox(height: 24),
+                          // Form 하단 버튼: 전체 너비. 제출 중에는 로딩 + 중복 탭 방지
+                          Consumer<SignUpViewModel>(
+                            builder: (context, viewModel, child) {
+                              return MovieLogButton(
+                                label: '가입하기',
+                                width: double.infinity,
+                                height: 48,
+                                disabledBackgroundColor: _disabledSubmit,
+                                isLoading: viewModel.isSubmitting,
+                                onPressed: _canSubmit(viewModel)
+                                    ? _onSubmitPressed
+                                    : null,
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          const _LoginRow(),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-            );
-          },
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-//상단헤더
-class TopNavigationHeaderWidget extends StatelessWidget {
-  const TopNavigationHeaderWidget({super.key});
+class _Header extends StatelessWidget {
+  const _Header();
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 48,
+      height: 64,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Positioned(
-            left: 0,
+          Align(
+            alignment: Alignment.centerLeft,
             child: IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: const Icon(Icons.arrow_back, color: AppColors.black),
-              onPressed: () => Navigator.maybePop(context),
+              icon: const Icon(Icons.arrow_back, color: _textMain),
+              // 제출 중에는 뒤로가기 버튼도 막습니다.
+              onPressed: context.watch<SignUpViewModel>().isSubmitting
+                  ? null
+                  : () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/start');
+                      }
+                    },
             ),
           ),
-          const Text('회원가입', style: AppTextStyles.appBarTitle),
-          const SizedBox(height: 8),
+          const Text(
+            '회원가입',
+            style: TextStyle(
+              fontSize: 22,
+              height: 28 / 22,
+              fontWeight: FontWeight.w500,
+              color: _violet,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-//서브 안내 문구
-class SignUpHeaderWidget extends StatelessWidget {
-  const SignUpHeaderWidget({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      children: [
-        Text(
-          '환영합니다!',
-          style: AppTextStyles.bodySmall,
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 6),
-        Text(
-          '간단한 정보만 입력하고 시작해보세요.',
-          style: AppTextStyles.bodySmall,
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-}
-
-//에러 완료 아이콘
-class SignUpFormFieldsWidget extends StatelessWidget {
-  final TextEditingController nicknameController;
-  final TextEditingController emailController;
-  final TextEditingController passwordController;
-  final FocusNode emailFocusNode;
-  final FocusNode passwordFocusNode;
-
-  final bool Function(String) isNicknameValid;
-  final bool Function(String) isEmailValid;
-  final bool Function(String) isPasswordValid;
-
-  final VoidCallback onChanged;
-
-  const SignUpFormFieldsWidget({
-    super.key,
-    required this.nicknameController,
-    required this.emailController,
-    required this.passwordController,
-    required this.emailFocusNode,
-    required this.passwordFocusNode,
-    required this.isNicknameValid,
-    required this.isEmailValid,
-    required this.isPasswordValid,
+class _LabeledField extends StatelessWidget {
+  const _LabeledField({
+    required this.label,
+    required this.controller,
+    required this.touched,
+    required this.valid,
+    required this.errorText,
     required this.onChanged,
+    this.serverErrorText,
+    this.successText,
+    this.checkingText,
+    this.trailing,
+    this.keyboardType,
+    this.obscureText = false,
   });
 
-  InputDecoration _buildInputDecoration({
-    required String hintText,
-    required bool hasText,
-    required bool isValid,
-    required bool isError,
-  }) {
-    Widget? suffix;
-    if (hasText) {
-      if (isError) {
-        // 에러 시 빨간 느낌표 아이콘
-        suffix = const Padding(
-          padding: EdgeInsets.only(right: 12.0),
-          child: Icon(Icons.error_outline, color: AppColors.error, size: 22),
-        );
-      } else if (isValid) {
-        // 성공 시 보라색 체크 아이콘
-        suffix = const Padding(
-          padding: EdgeInsets.only(right: 12.0),
-          child: Icon(Icons.check_circle, color: AppColors.violet, size: 22),
-        );
-      }
-    }
+  final String label;
+  final TextEditingController controller;
+  final bool touched;
+  final bool valid;
 
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: AppTextStyles.bodySmall,
-      filled: true,
-      fillColor: isError
-          ? AppColors.errorBackground
-          : AppColors.fieldBackground,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      suffixIcon: suffix,
-      suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.borderGrey),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(
-          color: isError ? AppColors.error : AppColors.borderGrey,
-        ),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(
-          color: isError ? AppColors.error : AppColors.violet,
-          width: 1.5,
-        ),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.error),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.error, width: 1.5),
-      ),
-      errorStyle: const TextStyle(color: AppColors.error, fontSize: 12),
-    );
-  }
+  /// 형식 검사(validator)에 실패했을 때 문구
+  final String errorText;
 
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(text, style: AppTextStyles.labelMedium),
-    );
-  }
+  /// 서버 중복 확인 결과 문구 (ViewModel이 내려줌). 형식 검사를 통과해도 있으면 에러 상태.
+  final String? serverErrorText;
+
+  /// 중복 확인 통과 문구 (초록)
+  final String? successText;
+
+  /// 중복 확인 중 문구 (파랑)
+  final String? checkingText;
+
+  /// 입력창 오른쪽에 붙는 위젯 (중복 확인 버튼)
+  final Widget? trailing;
+
+  final ValueChanged<String> onChanged;
+  final TextInputType? keyboardType;
+  final bool obscureText;
 
   @override
   Widget build(BuildContext context) {
-    final nicknameText = nicknameController.text;
-    final hasNicknameText = nicknameText.isNotEmpty;
-    final nicknameValid = isNicknameValid(nicknameText);
-    final nicknameError = hasNicknameText && !nicknameValid;
+    final showError = (touched && !valid) || serverErrorText != null;
+    final showCheck = touched && valid && serverErrorText == null;
 
-    final emailText = emailController.text;
-    final hasEmailText = emailText.isNotEmpty;
-    final emailValid = isEmailValid(emailText);
-    final emailError = hasEmailText && !emailValid;
+    OutlineInputBorder border(Color color) => OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide(color: color, width: 1),
+    );
 
-    final passwordText = passwordController.text;
-    final hasPasswordText = passwordText.isNotEmpty;
-    final passwordValid = isPasswordValid(passwordText);
-    final passwordError = hasPasswordText && !passwordValid;
+    final field = TextFormField(
+      controller: controller,
+      onChanged: onChanged,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      // 2주차 형식 검사. 입력을 시작한 뒤부터 검사한다.
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      validator: (_) => valid ? null : errorText,
+      style: const TextStyle(
+        fontSize: 16,
+        height: 24 / 16,
+        fontWeight: FontWeight.w400,
+        color: Color(0xFF211F26),
+      ),
+      decoration: InputDecoration(
+        // validator가 통과하면 서버 결과 문구가 errorText로 표시된다.
+        errorText: serverErrorText,
+        errorStyle: const TextStyle(
+          fontSize: 12,
+          height: 16 / 12,
+          fontWeight: FontWeight.w500,
+          color: _errorColor,
+        ),
+        isDense: true,
+        filled: true,
+        fillColor: showError ? _errorFill : _fieldFill,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        enabledBorder: border(_border),
+        focusedBorder: border(_violet),
+        errorBorder: border(_errorColor),
+        focusedErrorBorder: border(_errorColor),
+        suffixIconConstraints: const BoxConstraints(
+          minWidth: 40,
+          minHeight: 20,
+        ),
+        // 체크/에러 표시는 입력창 안에만 둔다. (버튼과 겹치지 않게)
+        suffixIcon: showError
+            ? const Padding(
+                padding: EdgeInsets.only(right: 16),
+                child: Icon(Icons.error_outline, size: 20, color: _errorColor),
+              )
+            : showCheck
+            ? const Padding(
+                padding: EdgeInsets.only(right: 16),
+                child: Icon(Icons.check_circle, size: 20, color: _violet),
+              )
+            : null,
+      ),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 닉네임
-        _buildLabel('닉네임'),
-        TextFormField(
-          controller: nicknameController,
-          style: AppTextStyles.bodyMedium,
-          decoration: _buildInputDecoration(
-            hintText: '닉네임을 입력해주세요',
-            hasText: hasNicknameText,
-            isValid: nicknameValid,
-            isError: nicknameError,
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            height: 24 / 16,
+            fontWeight: FontWeight.w500,
+            color: _textMain,
           ),
-          textInputAction: TextInputAction.next,
-          validator: (v) {
-            final val = v?.trim() ?? '';
-            if (val.isNotEmpty && val.length < 2) {
-              return '닉네임은 2자 이상이어야 합니다.';
-            }
-            return null;
-          },
-          onChanged: (_) => onChanged(),
-          onFieldSubmitted: (_) =>
-              FocusScope.of(context).requestFocus(emailFocusNode),
         ),
-        const SizedBox(height: 20),
-
-        // 이메일
-        _buildLabel('이메일'),
-        TextFormField(
-          controller: emailController,
-          focusNode: emailFocusNode,
-          style: AppTextStyles.bodyMedium,
-          keyboardType: TextInputType.emailAddress,
-          decoration: _buildInputDecoration(
-            hintText: '이메일 주소를 입력해주세요',
-            hasText: hasEmailText,
-            isValid: emailValid,
-            isError: emailError,
+        const SizedBox(height: 4),
+        if (trailing == null)
+          field
+        else
+          // TextFormField와 버튼을 Row의 별도 형제로 두고 8px 간격
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: field),
+              const SizedBox(width: 8),
+              trailing!,
+            ],
           ),
-          textInputAction: TextInputAction.next,
-          validator: (v) {
-            final val = v?.trim() ?? '';
-            if (val.isNotEmpty && !isEmailValid(val)) {
-              return '올바른 이메일 형식이 아닙니다.';
-            }
-            return null;
-          },
-          onChanged: (_) => onChanged(),
-          onFieldSubmitted: (_) =>
-              FocusScope.of(context).requestFocus(passwordFocusNode),
-        ),
-        const SizedBox(height: 20),
-
-        // 비밀번호
-        _buildLabel('비밀번호'),
-        TextFormField(
-          controller: passwordController,
-          focusNode: passwordFocusNode,
-          style: AppTextStyles.bodyMedium,
-          obscureText: true,
-          decoration: _buildInputDecoration(
-            hintText: '비밀번호를 입력해주세요',
-            hasText: hasPasswordText,
-            isValid: passwordValid,
-            isError: passwordError,
-          ),
-          textInputAction: TextInputAction.done,
-          validator: (v) {
-            final val = v ?? '';
-            if (val.isNotEmpty && val.length < 8) {
-              return '비밀번호는 8자 이상이어야 합니다.';
-            }
-            return null;
-          },
-          onChanged: (_) => onChanged(),
-        ),
+        if (checkingText != null)
+          _HelperText(checkingText!, color: _checkingColor)
+        else if (successText != null)
+          _HelperText(successText!, color: _successColor),
       ],
     );
   }
 }
 
-//약관동의
-class TermsCheckboxWidget extends StatelessWidget {
-  final bool value;
-  final ValueChanged<bool?> onChanged;
+class _HelperText extends StatelessWidget {
+  const _HelperText(this.text, {required this.color});
 
-  const TermsCheckboxWidget({
-    super.key,
-    required this.value,
-    required this.onChanged,
-  });
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          height: 16 / 12,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+class _TermsCheckbox extends StatelessWidget {
+  const _TermsCheckbox({required this.checked, required this.onChanged});
+
+  final bool checked;
+  final ValueChanged<bool> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => onChanged(!value),
       behavior: HitTestBehavior.opaque,
+      onTap: () => onChanged(!checked),
       child: Row(
         children: [
           Container(
-            width: 22,
-            height: 22,
+            width: 24,
+            height: 24,
             decoration: BoxDecoration(
-              color: value ? AppColors.violet : Colors.transparent,
+              color: checked ? _violet : Colors.white,
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(
-                color: value ? AppColors.violet : AppColors.gray,
-                width: 2,
-              ),
+              border: Border.all(color: checked ? _violet : _border),
             ),
-            child: value
-                ? const Icon(Icons.check, size: 16, color: AppColors.white)
+            child: checked
+                ? const Icon(Icons.check, size: 16, color: Colors.white)
                 : null,
           ),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text('필수 약관에 동의합니다', style: AppTextStyles.bodyMedium),
+          const SizedBox(width: 8),
+          const Text(
+            '필수 약관에 동의합니다',
+            style: TextStyle(
+              fontSize: 16,
+              height: 24 / 16,
+              fontWeight: FontWeight.w500,
+              color: _textMain,
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _LoginRow extends StatelessWidget {
+  const _LoginRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text(
+          '이미 계정이 있나요? ',
+          style: TextStyle(
+            fontSize: 16,
+            height: 24 / 16,
+            fontWeight: FontWeight.w500,
+            color: _textSub,
+          ),
+        ),
+        GestureDetector(
+          // 로그인 화면이 아직 없어서 일단 시작 화면으로 보냄
+          onTap: () => context.go('/start'),
+          child: const Text(
+            '로그인',
+            style: TextStyle(
+              fontSize: 16,
+              height: 24 / 16,
+              fontWeight: FontWeight.w500,
+              color: _violet,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
