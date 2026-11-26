@@ -28,12 +28,19 @@ class MovieLogButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: _disabled ? null : onPressed,
         style: ElevatedButton.styleFrom(
+          elevation: 0,
           backgroundColor: AppColors.violet,
-          disabledBackgroundColor: AppColors.gray,
+          // 통신 중은 회색, 조건 미충족 비활성은 연보라 (Figma 기준)
+          disabledBackgroundColor: isLoading
+              ? AppColors.gray
+              : AppColors.disabledButton,
           foregroundColor: AppColors.white,
+          disabledForegroundColor: AppColors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
         child: isLoading
             ? const SizedBox(

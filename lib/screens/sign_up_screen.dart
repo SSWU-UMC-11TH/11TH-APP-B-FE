@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../theme/app_text_styles.dart';
 import '../view_models/sign_up_view_model.dart';
 import '../widgets/movielog_button.dart';
 
@@ -15,6 +14,8 @@ const _border = Color(0xFFCBC4D2);
 const _fieldFill = Color(0xFFF5F3EF);
 const _errorColor = Color(0xFFB3261E);
 const _errorFill = Color(0xFFFFDAD6);
+const _successColor = Color(0xFF2E7D32); // 사용 가능 (초록)
+const _checkingColor = Color(0xFF1E6FD9); // 확인 중 (파랑)
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -103,11 +104,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     errorText: '닉네임은 2자 이상이어야 합니다.',
                                     serverErrorText:
                                         viewModel.nicknameErrorText,
-                                    successText:
+                                    checked:
                                         viewModel.nicknameCheckStatus ==
-                                            CheckStatus.available
-                                        ? '사용할 수 있는 닉네임입니다.'
-                                        : null,
+                                        CheckStatus.available,
+                                    statusText: switch (viewModel
+                                        .nicknameCheckStatus) {
+                                      CheckStatus.checking =>
+                                        '닉네임 사용 가능 여부를 확인 중입니다.',
+                                      CheckStatus.available => '사용 가능한 닉네임입니다.',
+                                      _ => null,
+                                    },
+                                    statusColor:
+                                        viewModel.nicknameCheckStatus ==
+                                            CheckStatus.checking
+                                        ? _checkingColor
+                                        : _successColor,
                                     onChanged: (value) {
                                       setState(() => _nicknameTouched = true);
                                       viewModel.onNicknameChanged(value);
@@ -134,11 +145,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     valid: _emailValid,
                                     errorText: '올바른 이메일 형식이 아닙니다.',
                                     serverErrorText: viewModel.emailErrorText,
-                                    successText:
+                                    checked:
                                         viewModel.emailCheckStatus ==
-                                            CheckStatus.available
-                                        ? '사용할 수 있는 이메일입니다.'
-                                        : null,
+                                        CheckStatus.available,
+                                    statusText: switch (viewModel
+                                        .emailCheckStatus) {
+                                      CheckStatus.checking =>
+                                        '이메일 사용 가능 여부를 확인 중입니다.',
+                                      CheckStatus.available => '사용 가능한 이메일입니다.',
+                                      _ => null,
+                                    },
+                                    statusColor:
+                                        viewModel.emailCheckStatus ==
+                                            CheckStatus.checking
+                                        ? _checkingColor
+                                        : _successColor,
                                     onChanged: (value) {
                                       setState(() => _emailTouched = true);
                                       viewModel.onEmailChanged(value);
@@ -249,7 +270,9 @@ class _LabeledField extends StatelessWidget {
     required this.errorText,
     required this.onChanged,
     this.serverErrorText,
-    this.successText,
+    this.checked = false,
+    this.statusText,
+    this.statusColor = _successColor,
     this.trailing,
     this.keyboardType,
     this.obscureText = false,
@@ -266,8 +289,12 @@ class _LabeledField extends StatelessWidget {
   /// 서버 중복 확인 결과 문구 (ViewModel이 내려줌). 형식 검사를 통과해도 있으면 에러 상태.
   final String? serverErrorText;
 
-  /// 중복 확인 통과 문구
-  final String? successText;
+  /// 서버가 사용 가능하다고 확인했을 때만 입력창 안에 체크 표시
+  final bool checked;
+
+  /// 입력창 아래 안내 문구 (확인 중 / 사용 가능)
+  final String? statusText;
+  final Color statusColor;
 
   /// 입력창 오른쪽에 붙는 위젯 (중복 확인 버튼)
   final Widget? trailing;
@@ -279,7 +306,7 @@ class _LabeledField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showError = (touched && !valid) || serverErrorText != null;
-    final showCheck = touched && valid && serverErrorText == null;
+    final showCheck = checked && !showError;
 
     OutlineInputBorder border(Color color) => OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
@@ -361,10 +388,18 @@ class _LabeledField extends StatelessWidget {
               trailing!,
             ],
           ),
-        if (successText != null)
+        if (statusText != null)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(successText!, style: AppTextStyles.bodySmall),
+            child: Text(
+              statusText!,
+              style: TextStyle(
+                fontSize: 12,
+                height: 16 / 12,
+                fontWeight: FontWeight.w600,
+                color: statusColor,
+              ),
+            ),
           ),
       ],
     );
