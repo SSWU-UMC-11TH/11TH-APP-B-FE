@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+
+const _bg = Color(0xFFFAF9F5);
+const _violet = Color(0xFF6750A4);
+const _textMain = Color(0xFF1D1B20);
+const _textSub = Color(0xFF494551);
 
 class StartScreen extends StatelessWidget {
   const StartScreen({super.key});
@@ -7,53 +13,54 @@ class StartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _bg,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Spacer(),
-
-              // 앱 로고 및 타이틀 영역
-              const Icon(
-                Icons.movie_filter_rounded,
-                size: 80,
-                color: Colors.deepPurple,
-              ),
+              const Spacer(flex: 3),
+              SvgPicture.asset('assets/images/logo.svg', width: 96, height: 96),
               const SizedBox(height: 24),
-              Text(
+              const Text(
                 'MovieLog',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 32,
+                  height: 40 / 32,
+                  fontWeight: FontWeight.w500,
+                  color: _textMain,
+                ),
               ),
-              const SizedBox(height: 12),
-              Text(
+              const SizedBox(height: 8),
+              const Text(
                 '나만의 영화 기록을 관리해보세요',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium
-                    ?.copyWith(color: Colors.grey[600]),
-              ),
-
-              const Spacer(),
-
-              // 시작하기 버튼
-              ElevatedButton(
-                onPressed: () {
-                  // 회원가입 화면으로 이동
-                  context.go('/register');
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                style: TextStyle(
+                  fontSize: 16,
+                  height: 24 / 16,
+                  fontWeight: FontWeight.w500,
+                  color: _textSub,
                 ),
-                child: const Text(
-                  '시작하기',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(flex: 4),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () => context.go('/register'),
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    backgroundColor: _violet,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  child: const Text('시작하기'),
                 ),
               ),
               const SizedBox(height: 32),
