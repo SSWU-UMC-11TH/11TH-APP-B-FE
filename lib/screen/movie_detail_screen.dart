@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../data/services/rating_api_service.dart';
@@ -48,7 +47,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         ),
       );
     } else if (viewModel.submitStatus == SubmitStatus.error) {
-      // 실패 후 사용자가 Dialog를 취소한 경우
+      // 실패(403·409·400 등) 후 사용자가 Dialog를 닫은 경우: 안내만 하고 로그인 상태는 유지
       messenger.showSnackBar(
         SnackBar(
           content: Text('평점을 등록하지 못했습니다. ${viewModel.submitMessage ?? ''}'),
@@ -128,11 +127,10 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // 평점 남기기: 학습용 회원가입(memberId)이 없으면 비활성화
+                // 평점 남기기: 로그인 토큰으로 등록합니다. (보호 화면이라 로그인 상태에서만 진입)
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: viewModel.canRate &&
-                            viewModel.submitStatus != SubmitStatus.submitting
+                    onPressed: viewModel.submitStatus != SubmitStatus.submitting
                         ? _onRatePressed
                         : null,
                     icon: const Icon(Icons.star),
@@ -141,23 +139,6 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 ),
               ],
             ),
-            if (!viewModel.canRate) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      '평점을 남기려면 학습용 회원가입이 필요합니다.',
-                      style: TextStyle(fontSize: 13, color: Colors.black54),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => context.push('/register'),
-                    child: const Text('회원가입'),
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
       ),

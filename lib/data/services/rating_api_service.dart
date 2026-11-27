@@ -1,59 +1,69 @@
 import 'package:dio/dio.dart';
 
+import '../../core/network/api_error.dart';
 import '../models/common_response.dart';
 import '../models/rating_dto.dart';
 import '../models/rating_request.dart';
 
+/// v7 등록·수정 성공 result는 Rating 객체입니다.
+RatingDto parseRatingResult(Object? data) {
+  if (data is! Map<String, dynamic>) {
+    throw StateError('평점 응답 형식이 올바르지 않습니다.');
+  }
+  final common = CommonResponse<RatingDto>.fromJson(
+    data,
+    (value) => RatingDto.fromJson(value as Map<String, dynamic>),
+  );
+  final rating = common.result;
+  if (rating == null) throw StateError('평점 result가 없습니다.');
+  return rating;
+}
+
+List<RatingDto> parseRatingList(Object? data) {
+  if (data is! List) throw StateError('평점 목록 응답은 배열이어야 합니다.');
+  return data
+      .map((value) => RatingDto.fromJson(value as Map<String, dynamic>))
+      .toList();
+}
+
+/// 유저별 평점 조회는 공개 Client, 등록·수정·삭제는 보호 Client로 보냅니다.
+/// 어떤 Client를 쓸지는 Service가 메서드별로 결정합니다.
 class RatingApiService {
-  RatingApiService(this._dio);
+  RatingApiService(this._publicDio, this._authDio);
 
-  final Dio _dio;
+  final Dio _publicDio;
+  final Dio _authDio;
 
-  /// 200 + 직접 배열 (v5부터 있던 조회 API라 성공 응답은 wrapper가 없습니다)
-  Future<List<RatingDto>> fetchMyRatings(int memberId) async {
-    final response = await _dio.get('/v6/members/$memberId/ratings');
-    final list = response.data as List<dynamic>;
-    return list
-        .map((item) => RatingDto.fromJson(item as Map<String, dynamic>))
-        .toList();
+  /// 공개 조회: 직접 배열, 토큰 없음 (memberId path 유지)
+  Future<List<RatingDto>> fetchMemberRatings(int memberId) async {
+    final response = await _publicDio.get('/v7/members/$memberId/ratings');
+    return parseRatingList(response.data);
   }
 
-  /// 201 + wrapper. result(ratingId/null) 계약이 확정되지 않아 파싱하지 않고,
-  /// 성공 후 GET으로 목록을 다시 확인합니다.
-  Future<void> createRating({
-    required int memberId,
-    required CreateRatingRequest request,
-  }) async {
-    final response = await _dio.post(
-      '/v6/members/$memberId/ratings',
-      data: request.toJson(),
-    );
-    if (response.statusCode != 201) {
-      throw StateError('예상하지 못한 등록 응답: ${response.statusCode}');
-    }
+  /// POST /v7/ratings — body와 path에 memberId가 없습니다. Authorization 헤더로 식별합니다.
+  Future<RatingDto> createRating(CreateRatingRequest request) async {
+    final response = await _authDio.post('/v7/ratings', data: request.toJson());
+    return parseRatingResult(response.data);
   }
 
-  /// 200 + result null. score는 필수, comment는 유지하려면 기존 값을 명시적으로 보냅니다.
-  Future<void> updateRating({
-    required int memberId,
+  /// PATCH는 전체 교체라 comment를 생략하면 기존 후기가 null로 덮입니다.
+  /// 기존 score·comment를 채운 Dialog 값으로 두 값을 함께 보냅니다.
+  Future<RatingDto> updateRating({
     required int ratingId,
-    required UpdateRatingRequest request,
+    required int score,
+    String? comment,
   }) async {
-    await _dio.patch(
-      '/v6/members/$memberId/ratings/$ratingId',
-      data: request.toJson(),
+    final response = await _authDio.patch(
+      '/v7/ratings/$ratingId',
+      data: UpdateRatingRequest(score: score, comment: comment).toJson(),
     );
+    return parseRatingResult(response.data);
   }
 
-  /// 204 + body 없음. 응답 본문을 JSON으로 파싱하지 않습니다.
-  Future<void> deleteRating({
-    required int memberId,
-    required int ratingId,
-  }) async {
-    final response = await _dio.delete(
-      '/v6/members/$memberId/ratings/$ratingId',
-    );
-    if (response.statusCode != 204) {
+  /// v7 삭제 성공은 204가 아니라 result가 null인 200 응답입니다.
+  Future<void> deleteRating(int ratingId) async {
+    final response = await _authDio.delete('/v7/ratings/$ratingId');
+    if (response.statusCode != 200) {
       throw StateError('예상하지 못한 삭제 응답: ${response.statusCode}');
     }
   }
@@ -69,33 +79,22 @@ class RatingActionException implements Exception {
   String toString() => message;
 }
 
-/// 같은 COMMON404라도 등록에서는 "유저", 수정·삭제에서는 "평점"을 가리키므로
-/// code별 문구를 새로 만들지 않고 서버 message를 그대로 보여줍니다.
-String writeErrorMessage(DioException error) {
-  final common = tryParseCommonError(error.response?.data);
-  if (common != null) return common.message;
-  if (error.type == DioExceptionType.connectionTimeout ||
-      error.type == DioExceptionType.receiveTimeout ||
-      error.type == DioExceptionType.connectionError) {
-    return '네트워크 연결을 확인한 뒤 다시 시도해 주세요.';
+/// v7 도메인 오류 code별 안내 문구
+String writeRatingErrorMessage(DioException error) {
+  final code = apiErrorCode(error);
+  switch (code) {
+    case 'RATING403_1':
+      return '본인이 작성한 평점만 수정하거나 삭제할 수 있어요.';
+    case 'RATING404_1':
+      return '존재하지 않는 평점이에요. 목록을 새로고침했어요.';
+    case 'RATING409_1':
+      return '이미 이 영화에 평점을 남겼어요. "내가 등록한 평점"에서 확인해 주세요.';
+    case 'MEMBER404_1':
+      return '회원 정보를 찾을 수 없어요.';
+    case 'COMMON400':
+      return apiErrorMessage(error) ?? '입력값을 확인해 주세요.';
   }
-  return '요청에 실패했습니다. 잠시 후 다시 시도해 주세요.';
-}
-
-/// code는 문구가 아니라 "다시 조회할지"를 정하는 데만 씁니다.
-/// 403·404는 화면 목록이 서버 상태와 어긋났다는 뜻이라 다시 조회합니다.
-/// 400(별점 범위)·409(중복 등록)는 값만 고치거나 다시 시도하면 되므로 재조회하지 않습니다.
-bool shouldRefreshAfterRatingError(DioException error) {
-  final code = tryParseCommonError(error.response?.data)?.code;
-  return code == 'COMMON403' || code == 'COMMON404';
-}
-
-/// 평점 목록 조회(GET) 실패 문구
-String writeMyRatingsErrorMessage(DioException error) {
-  final common = tryParseCommonError(error.response?.data);
-  if (common != null) return common.message;
-  final status = error.response?.statusCode;
-  if (status == 400) return 'memberId 형식을 다시 확인해 주세요.';
-  if (status == 404) return '존재하지 않는 회원입니다.';
-  return '평점을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  if (isSessionExpiredCode(code)) return '로그인이 만료됐어요. 다시 로그인해 주세요.';
+  if (error.response == null) return '네트워크 상태를 확인하고 다시 시도해 주세요.';
+  return apiErrorMessage(error) ?? '요청에 실패했습니다. 잠시 후 다시 시도해 주세요.';
 }
