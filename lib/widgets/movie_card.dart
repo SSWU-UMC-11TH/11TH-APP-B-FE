@@ -17,7 +17,7 @@ class MovieCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 포스터 + 별점 오버레이
+          // 포스터 + 평점 뱃지
           Expanded(
             child: Stack(
               children: [
@@ -28,8 +28,8 @@ class MovieCard extends StatelessWidget {
                     width: double.infinity,
                     height: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: Colors.grey[300],
+                    errorBuilder: (_, _, _) => Container(
+                      color: const Color(0xFFE6E0E9),
                       child: const Icon(Icons.movie, size: 50),
                     ),
                   ),
@@ -43,23 +43,17 @@ class MovieCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(6),
+                      color: const Color(0xCC322F35), // rgba(50,47,53,0.8)
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 14),
-                        const SizedBox(width: 2),
-                        Text(
-                          '${movie.rating}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      '★ ${movie.rating}',
+                      style: const TextStyle(
+                        color: Color(0xFFF5EFF7),
+                        fontSize: 12,
+                        height: 16 / 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),
@@ -71,12 +65,23 @@ class MovieCard extends StatelessWidget {
             movie.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            style: const TextStyle(
+              fontSize: 16,
+              height: 24 / 16,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF1D1B20),
+            ),
           ),
-          const SizedBox(height: 2),
           Text(
             '${movie.year} · ${movie.genre}',
-            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 16,
+              height: 24 / 16,
+              fontWeight: FontWeight.w400,
+              color: Color(0xCC1D1B20), // opacity 0.8
+            ),
           ),
         ],
       ),

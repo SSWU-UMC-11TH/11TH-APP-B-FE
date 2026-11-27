@@ -11,8 +11,10 @@ import '../screens/movie_detail_screen.dart';
 
 class AppRouter {
   AppRouter._();
+  static final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
   static final router = GoRouter(
+    navigatorKey: _rootNavigatorKey,
     initialLocation: '/start',
     routes: [
       GoRoute(path: '/start', builder: (context, state) => const StartScreen()),
@@ -43,6 +45,7 @@ class AppRouter {
                 routes: [
                   GoRoute(
                     path: ':movieId',
+                    parentNavigatorKey: _rootNavigatorKey,
                     builder: (context, state) => MovieDetailScreen(
                       movieId: state.pathParameters['movieId']!,
                     ),
