@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
-import '../models/movie.dart';
+import '../../data/models/tmdb_movie_dto.dart'; 
 import '../widgets/rating_dialog.dart';
 
 class MovieDetailScreen extends StatefulWidget {
-  final int movieId;
+  final TmdbMovieDto movie;
 
-  const MovieDetailScreen({super.key, required this.movieId});
+  const MovieDetailScreen({super.key, required this.movie});
 
   @override
   State<MovieDetailScreen> createState() => _MovieDetailScreenState();
@@ -16,16 +16,16 @@ class MovieDetailScreen extends StatefulWidget {
 class _MovieDetailScreenState extends State<MovieDetailScreen> {
   bool isFavorite = false;
 
+  String get _year {
+    final date = widget.movie.releaseDate;
+    if (date == null || date.isEmpty) return '개봉일 미정';
+    return date.split('-').first;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final movie = findMovieById(widget.movieId);
-
-    if (movie == null) {
-      return Scaffold(
-        appBar: AppBar(),
-        body: const Center(child: Text('영화를 찾을 수 없습니다.')),
-      );
-    }
+    final movie = widget.movie; 
+    final score = movie.voteAverage / 2; 
 
     return Scaffold(
       appBar: AppBar(title: Text(movie.title)),
@@ -39,30 +39,30 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text(
-              '${movie.year} · ${movie.genre} · ${movie.duration}',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
+            Text(_year, style: TextStyle(color: Colors.grey[600])),
             const SizedBox(height: 12),
             // 읽기 전용 별점 표시
             Row(
               children: [
                 RatingBarIndicator(
-                  rating: 4.5, // 4.5 읽기 전용 요구사항
+                  rating: score,
                   itemCount: 5,
                   itemSize: 20,
                   itemBuilder: (context, index) =>
                       const Icon(Icons.star, color: Colors.amber),
                 ),
                 const SizedBox(width: 8),
-                const Text(
-                  '4.5',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                Text(
+                  score.toStringAsFixed(1),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 24),
-            Text(movie.synopsis, style: const TextStyle(fontSize: 16)),
+            Text(
+              movie.overview.isNotEmpty ? movie.overview : '줄거리 정보가 없습니다.',
+              style: const TextStyle(fontSize: 16),
+            ),
             const SizedBox(height: 32),
             Row(
               children: [
@@ -93,14 +93,18 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      final rating = await showDialog<double>(
+                      final result = await showDialog<RatingResult>(
                         context: context,
-                        builder: (context) => const RatingDialog(),
+                        builder: (context) => RatingDialog(movieId: movie.id),
                       );
                       if (!mounted) return; // mounted 먼저 체크 후 return
-                      if (rating != null) {
+                      if (result != null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('평점 $rating점이 등록되었습니다.')),
+                          SnackBar(
+                            content: Text(
+                              '${movie.title}에 평점 ${result.rating}점이 등록되었습니다.',
+                            ),
+                          ),
                         );
                       }
                     },

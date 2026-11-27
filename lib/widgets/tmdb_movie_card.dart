@@ -15,14 +15,12 @@ class TmdbMovieCard extends StatelessWidget {
     return date.substring(0, 4);
   }
 
-  @override
+  @override 
   Widget build(BuildContext context) {
     final year = _year;
 
     return GestureDetector(
-      // TMDB id를 그대로 전달 (이후 평점 movieId로 사용)
-      onTap: () => context.push('/movies/${movie.id}'),
-      child: Column(
+onTap: () => context.push('/movies/${movie.id}', extra: movie),      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(

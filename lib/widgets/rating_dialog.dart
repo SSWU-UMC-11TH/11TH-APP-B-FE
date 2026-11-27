@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'movie_rating_input.dart';
 
+typedef RatingResult = ({int movieId, double rating});
+
 class RatingDialog extends StatefulWidget {
-  const RatingDialog({super.key});
+  final int movieId; 
+
+  const RatingDialog({super.key, required this.movieId});
 
   @override
   State<RatingDialog> createState() => _RatingDialogState();
@@ -44,7 +48,10 @@ class _RatingDialogState extends State<RatingDialog> {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: () => Navigator.pop(context, _rating),
+                  onPressed: () => Navigator.pop<RatingResult>(
+                    context,
+                    (movieId: widget.movieId, rating: _rating),
+                  ),
                   child: const Text('확인'),
                 ),
               ],
