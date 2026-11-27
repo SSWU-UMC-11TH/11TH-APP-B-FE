@@ -32,20 +32,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   bool get _canSubmit {
-    return _nicknameController.text.trim().length >= 2 &&
-        _emailController.text.contains('@') &&
-        _passwordController.text.length >= 8 &&
-        _agreedToTerms;
-  }
+  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+  return _nicknameController.text.trim().length >= 2 &&
+      emailRegex.hasMatch(_emailController.text.trim()) && 
+      _passwordController.text.length >= 8 &&
+      _agreedToTerms;
+}
 
-  void _submitForm() {
-    final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid) return;
+void _submitForm() {
+  final isValid = _formKey.currentState?.validate() ?? false;
+  if (!isValid || !_agreedToTerms) return;
 
-    FocusScope.of(context).unfocus();
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('회원가입이 완료되었습니다!')));
-  }
+  FocusScope.of(context).unfocus();
+  
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('회원가입이 완료되었습니다!')),
+  );
+
+  context.go('/home'); 
+}
 
   @override
   Widget build(BuildContext context) {
@@ -249,11 +254,15 @@ class _FormInputFields extends StatelessWidget {
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
           validator: (v) {
-            final val = v?.trim() ?? '';
-            if (val.isEmpty) return '이메일을 입력해주세요.';
-            if (!val.contains('@')) return '올바른 이메일 형식이 아닙니다.';
-            return null;
-          },
+  final val = v?.trim() ?? '';
+  if (val.isEmpty) return '이메일을 입력해주세요.';
+  
+
+  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+  if (!emailRegex.hasMatch(val)) return '올바른 이메일 형식이 아닙니다.';
+  
+  return null;
+},
           onChanged: onChanged,
           onFieldSubmitted: (_) =>
               FocusScope.of(context).requestFocus(passwordFocusNode),
@@ -315,26 +324,25 @@ class _TermsAndSubmitSection extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           height: 48,
-          child: ElevatedButton(
-            onPressed: () {
-              context.go('/home');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6B4EFF),
-              disabledBackgroundColor: const Color(0xFFCCC5E9),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              elevation: 0,
-            ),
-            child: const Text(
-              '가입하기',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          child:ElevatedButton(
+  // ✅ canSubmit 조건에 따라 버튼 활성화/비활성화 및 제출 함수 연결
+  onPressed: canSubmit ? onSubmit : null,
+  style: ElevatedButton.styleFrom(
+    backgroundColor: const Color(0xFF6B4EFF),
+    disabledBackgroundColor: const Color(0xFFCCC5E9),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8),
+    ),
+    elevation: 0,
+  ),
+  child: const Text(
+    '가입하기',
+    style: TextStyle(
+      color: Colors.white,
+      fontSize: 16,
+      fontWeight: FontWeight.bold,
+    ),
+  ),
           ),
         ),
       ],

@@ -70,21 +70,17 @@ class MyPageScreen extends StatelessWidget {
 
             // 2. 활동 통계 요약 (본 영화 / 평점 / 즐겨찾기)
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF6F4FA),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildStatItem('본 영화', '342'),
-                  Container(height: 30, width: 1, color: Colors.grey[300]),
-                  _buildStatItem('평점', '4.2'),
-                  Container(height: 30, width: 1, color: Colors.grey[300]),
-                  _buildStatItem('즐겨찾기', '58'),
-                ],
-              ),
+  decoration: BoxDecoration(
+    color: const Color(0xFFF6F4FA),
+    borderRadius: BorderRadius.circular(16),
+  ),
+  child: Row(
+    children: [
+      Expanded(child: _buildStatItem('본 영화', '342')),
+      Expanded(child: _buildStatItem('평점', '4.2')),
+      Expanded(child: _buildStatItem('즐겨찾기', '58')),
+    ],
+  ),
             ),
             const SizedBox(height: 28),
 

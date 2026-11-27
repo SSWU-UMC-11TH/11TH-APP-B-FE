@@ -22,16 +22,6 @@ class Movie {
 
 const List<Movie> mockMovies = [
   Movie(
-    id: 1,
-    title: '별빛 아래 우리',
-    genre: '드라마',
-    year: 2024,
-    posterAsset: 'assets/images/movie_1.png',
-    rating: 4.8,
-    duration: '120분',
-    synopsis: '바쁜 현대 사회 속에서 서로의 존재를 잊고 살아가던 두 남녀가 우연한 계기로 작은 천문대에서 만나게 됩니다.',
-  ),
-  Movie(
     id: 2,
     title: '우주의 끝에서',
     genre: 'SF',
@@ -64,9 +54,5 @@ const List<Movie> mockMovies = [
 ];
 
 Movie? findMovieById(int id) {
-  try {
-    return mockMovies.firstWhere((movie) => movie.id == id);
-  } catch (_) {
-    return null;
-  }
+  return mockMovies.where((movie) => movie.id == id).firstOrNull;
 }
